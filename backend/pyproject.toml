@@ -1,7 +1,7 @@
 [project]
 name = "adbreak-backend"
 version = "0.1.0"
-description = "Context-aware video segmentation & intelligent ad placement (hoichoi Hackathon '26, Problem 1)"
+description = "Cuepoint — context-aware ad-break placement for long-form video"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",

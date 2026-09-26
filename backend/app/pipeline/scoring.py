@@ -85,15 +85,15 @@ def _score_point(t0: float, boundary_quality: float, source: str, scenes, speech
     score = max(0.0, min(1.0, score))
     reasons = []
     if mid_speech:
-        reasons.append(f"cut falls inside speech {sp['start']:.1f}-{sp['end']:.1f}s")
+        reasons.append(f"falls inside dialogue ({sp['start']:.0f}–{sp['end']:.0f}s)")
     elif sp and hard_silence:
-        reasons.append(f"inside a coarse speech passage but on a {sil['dur']:.2f}s hard silence")
+        reasons.append(f"on a {sil['dur']:.1f}s silence within a dialogue passage")
     if gap is None:
-        reasons.append("no pause within snap window")
+        reasons.append("no natural pause nearby")
     else:
-        reasons.append(f"{'clean' if gap_len >= IDEAL_PAUSE else 'short'} {gap_len:.2f}s {gap_kind.replace('_', ' ')}")
+        reasons.append(f"{'clean' if gap_len >= IDEAL_PAUSE else 'short'} {gap_len:.1f}s pause" + ("" if gap_kind == "silence" else " between lines"))
     if comp["shot_cut"] == 1.0:
-        reasons.append("aligned with shot change")
+        reasons.append("aligned with a shot change")
     scene_before = _scene_at(cut - 0.01, scenes)
     scene_after = _scene_at(cut + 0.01, scenes)
     return cut, score, comp, reasons, mid_speech, scene_before, scene_after
@@ -122,7 +122,7 @@ def score_candidates(analysis: dict, silences: list[dict], shot_cuts: list[float
         comp["chunk_edge_penalty"] = -0.1 if chunk_edge else 0.0
         score = max(0.0, min(1.0, score + comp["cliffhanger_bonus"] + comp["chunk_edge_penalty"]))
         if reason:
-            reasons.append(f"gemini: {reason}")
+            reasons.append(reason)
         cands.append({
             "id": f"c{i+1:03d}",
             "time": round(cut, 2),
@@ -160,17 +160,17 @@ def select_breaks(cands: list[dict], duration: float, pacing: dict, vetoed: dict
         if c["id"] in vetoed:
             why = vetoed[c["id"]]
         elif c["mid_speech"]:
-            why = "mid-speech cut"
+            why = "would cut mid-dialogue"
         elif c["cut_safety"] < pacing["min_cut_safety"]:
-            why = f"cut_safety {c['cut_safety']} < min {pacing['min_cut_safety']}"
+            why = f"cut safety {c['cut_safety']:.2f} is below the {pacing['min_cut_safety']:.2f} threshold"
         elif c["time"] < pacing["no_break_before_seconds"]:
-            why = "too close to start"
+            why = "too close to the start"
         elif c["time"] > duration - pacing["no_break_after_seconds"]:
-            why = "too close to end"
+            why = "too close to the end"
         elif len(selected) >= max_breaks:
-            why = f"break budget reached ({max_breaks} for {duration/60:.0f} min at {pacing['max_breaks_per_hour']}/hr, ad load ≤{pacing['max_ad_load_pct']}%)"
+            why = f"break budget reached — {max_breaks} for a {duration/60:.0f}-min episode"
         elif any(abs(c["time"] - s["time"]) < pacing["min_gap_seconds"] for s in selected):
-            why = f"within min gap {pacing['min_gap_seconds']}s of another break"
+            why = f"less than {pacing['min_gap_seconds']//60} min from another break"
         if why:
             rejected.append({**c, "rejected_because": why})
         else:

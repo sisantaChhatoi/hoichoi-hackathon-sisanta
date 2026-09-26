@@ -20,27 +20,27 @@ def _logger(job_id: str):
 def analyze(job_id: str, video_path: str) -> dict:
     """Expensive half (ffmpeg + Gemini). Cached on disk by content hash."""
     log = _logger(job_id)
-    store.set_progress(job_id, "probe", 2, "reading media info")
+    store.set_progress(job_id, "probe", 2, "Reading media info")
     info = audio.probe(video_path)
     log(f"media: {info['duration']:.1f}s {info['width']}x{info['height']} {info['size_bytes']/1e6:.0f}MB")
 
-    store.set_progress(job_id, "silence", 5, "mapping silences (ffmpeg)")
+    store.set_progress(job_id, "silence", 5, "Mapping silences")
     silences = audio.silence_map(video_path)
     log(f"silence: {len(silences)} gaps")
 
     cuts = []
     if config.SHOT_DETECT:
-        store.set_progress(job_id, "shots", 10, "detecting shot changes (ffmpeg)")
+        store.set_progress(job_id, "shots", 10, "Detecting shot changes")
         cuts = audio.shot_cuts(video_path)
         log(f"shots: {len(cuts)} cuts")
 
-    store.set_progress(job_id, "upload", 15, "uploading to Gemini Files API")
+    store.set_progress(job_id, "upload", 15, "Uploading to the vision model")
     file = gemini.upload_video(video_path, log=log)
 
-    store.set_progress(job_id, "gemini", 20, "scene analysis")
+    store.set_progress(job_id, "gemini", 20, "Analysing scenes")
     analysis = gemini.analyze_video(
         file, info["duration"], log=log,
-        on_progress=lambda f: store.set_progress(job_id, "gemini", 20 + 60 * f, f"scene analysis {int(f*100)}%"),
+        on_progress=lambda f: store.set_progress(job_id, "gemini", 20 + 60 * f, f"Analysing scenes · {int(f*100)}%"),
     )
     log(f"gemini: {len(analysis['scenes'])} scenes, {len(analysis['speech'])} speech passages")
     return {"media": info, "silences": silences, "shot_cuts": cuts, **analysis}
@@ -118,7 +118,7 @@ def run_job(job_id: str, video_path: str, pacing: dict | None = None) -> None:
     try:
         analysis = analyze(job_id, video_path)
         store.update(job_id, analysis=analysis)
-        store.set_progress(job_id, "placement", 85, "scoring breaks and matching brands")
+        store.set_progress(job_id, "placement", 85, "Scoring breaks and matching brands")
         result = place(job_id, analysis, matching.load_brands(), {**config.DEFAULT_PACING, **(pacing or {})},
                        config.CREATIVE_BASE_URL, video_path=video_path)
         store.update(job_id, result=result, status="done", stage="done", progress=100, message="")

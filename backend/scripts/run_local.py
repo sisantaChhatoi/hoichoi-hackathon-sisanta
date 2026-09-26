@@ -1,6 +1,6 @@
 """Run the full pipeline on a local video without the API server.
 
-    cd backend && uv run python scripts/run_local.py ~/hoichoi-samples/feluda.mp4
+    cd backend && uv run python scripts/run_local.py ~/Downloads/feluda.mp4
 """
 import json
 import sys

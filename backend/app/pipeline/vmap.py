@@ -26,7 +26,7 @@ def build_vmap(job_id: str, breaks: list[dict], ad_seconds: int, creative_base_u
         out.append('        <VAST version="3.0">')
         out.append(f'          <Ad id="{escape(brand["id"])}" sequence="1">')
         out.append('            <InLine>')
-        out.append(f'              <AdSystem version="1.0">hoichoi-contextual-adbreak</AdSystem>')
+        out.append(f'              <AdSystem version="1.0">cuepoint</AdSystem>')
         out.append(f'              <AdTitle>{escape(brand["name"])}</AdTitle>')
         out.append(f'              <Description>{escape(brand.get("tagline", ""))}</Description>')
         out.append('              <Impression><![CDATA[about:blank]]></Impression>')

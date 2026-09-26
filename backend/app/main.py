@@ -39,7 +39,7 @@ async def _lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="hoichoi contextual ad-break API", lifespan=_lifespan)
+app = FastAPI(title="Cuepoint API", lifespan=_lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS + ["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/media", StaticFiles(directory=str(config.MEDIA_DIR), follow_symlink=True), name="media")
 
@@ -125,7 +125,7 @@ class JobFromUrl(BaseModel):
 def _download_and_run(job_id: str, url: str, pacing: dict | None):
     dest = _local_video_path(job_id)
     try:
-        store.set_progress(job_id, "download", 1, "downloading video")
+        store.set_progress(job_id, "download", 1, "Downloading video")
         with httpx.stream("GET", url, follow_redirects=True, timeout=600) as r:
             r.raise_for_status()
             with dest.open("wb") as f:

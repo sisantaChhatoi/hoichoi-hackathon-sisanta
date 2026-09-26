@@ -1,9 +1,28 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { ArrowRight, Check, ChevronDown, Download, FileJson, RefreshCw, ShieldCheck } from "lucide-react";
 import { API, api, Job, Scene, fmt, mediaUrl } from "@/lib/api";
+import { STAGES, blockLabel, matchLabel, sourceLabel, stageLabel } from "@/lib/copy";
 import Player from "@/components/Player";
 import Timeline from "@/components/Timeline";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
+import { cn } from "cn";
+
+const PACING: { key: string; label: string; min: number; max: number; step: number; unit?: string }[] = [
+  { key: "max_breaks_per_hour", label: "Breaks per hour", min: 1, max: 12, step: 1 },
+  { key: "min_gap_seconds", label: "Minimum gap", min: 60, max: 900, step: 30, unit: "s" },
+  { key: "max_ad_load_pct", label: "Ad load", min: 2, max: 25, step: 1, unit: "%" },
+  { key: "ad_duration_seconds", label: "Ad length", min: 10, max: 60, step: 5, unit: "s" },
+  { key: "min_cut_safety", label: "Minimum cut safety", min: 0.3, max: 0.9, step: 0.05 },
+];
 
 export default function JobPage() {
   const { id } = useParams<{ id: string }>();
@@ -11,6 +30,7 @@ export default function JobPage() {
   const [err, setErr] = useState("");
   const [pacing, setPacing] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
+  const [seekTo, setSeekTo] = useState<number | null>(null);
 
   const load = useCallback(() => api.job(id).then(setJob).catch((e) => setErr(String(e))), [id]);
   useEffect(() => {
@@ -24,112 +44,147 @@ export default function JobPage() {
     try { setJob(await api.place(id, pacing)); } catch (e) { setErr(String(e)); } finally { setBusy(false); }
   }
 
-  if (err) return <div style={{ color: "var(--bad)" }}>{err}</div>;
-  if (!job) return <div className="muted">Loading…</div>;
+  if (err) return <p className="text-destructive">{err}</p>;
+  if (!job) return <p className="text-muted-foreground">Loading…</p>;
   const a = job.analysis, r = job.result;
   const scenesById: Record<string, Scene> = Object.fromEntries((a?.scenes ?? []).map((s) => [s.id, s]));
   const p = { ...(r?.pacing ?? {}), ...pacing };
+  const stageIdx = STAGES.indexOf((job.stage ?? "") as typeof STAGES[number]);
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-4 flex-wrap">
-        <h1 className="text-xl font-bold">{job.title}</h1>
-        <span className="chip">{job.status}{job.stage && job.status !== "done" ? ` · ${job.stage}` : ""}</span>
-        {a && <span className="muted text-sm">{fmt(a.media.duration)} · {a.media.width}×{a.media.height} · {a.silence_count} silences · {a.shot_cut_count} shot cuts</span>}
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{job.title}</h1>
+        {a && <span className="text-sm text-muted-foreground">{fmt(a.media.duration)} · {a.media.width}×{a.media.height}</span>}
         {r && (
-          <span className="ml-auto flex gap-2">
-            <a className="btn-ghost text-sm" href={`${API}/jobs/${id}/vmap.xml`} target="_blank">VMAP manifest</a>
-            <a className="btn-ghost text-sm" href={`${API}/jobs/${id}/debug.json`} target="_blank">Debug JSON</a>
-          </span>
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" size="sm" render={<a href={`${API}/jobs/${id}/vmap.xml`} target="_blank" rel="noreferrer" />}>
+              <Download data-icon="inline-start" /> VMAP manifest
+            </Button>
+            <Button variant="outline" size="sm" render={<a href={`${API}/jobs/${id}/debug.json`} target="_blank" rel="noreferrer" />}>
+              <FileJson data-icon="inline-start" /> Decision report
+            </Button>
+          </div>
         )}
       </div>
 
       {job.status !== "done" && (
-        <div className="panel p-4">
-          <div className="flex justify-between text-sm mb-2 gap-3">
-            <span>{job.message || job.stage}</span>
-            <span className="flex items-center gap-3">
-              {job.status === "error" && <button className="btn-ghost !py-0.5 !px-2 text-xs" onClick={() => api.retry(id).then(setJob).catch((e) => setErr(String(e)))}>Retry</button>}
-              {job.progress ?? 0}%
-            </span>
-          </div>
-          <div className="h-2 rounded bg-[var(--line)] overflow-hidden"><div className="h-full" style={{ width: `${job.progress ?? 0}%`, background: job.status === "error" ? "var(--bad)" : "var(--accent)" }} /></div>
-          <pre className="mt-3 text-xs muted max-h-48 overflow-auto whitespace-pre-wrap">{(job.log ?? []).slice(-15).join("\n")}</pre>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>{job.status === "error" ? "Analysis failed" : "Analysing"}</CardTitle>
+            <CardDescription>{job.status === "error" ? job.message : job.message || stageLabel[job.stage ?? "queued"]}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {job.status !== "error" && <Progress value={job.progress ?? 0} />}
+            <ol className="grid gap-2 sm:grid-cols-5">
+              {STAGES.map((s, i) => {
+                const state = job.status === "error" ? "idle" : i < stageIdx ? "done" : i === stageIdx ? "active" : "idle";
+                return (
+                  <li key={s} className={cn("flex items-center gap-2 text-sm", state === "idle" && "text-muted-foreground")}>
+                    <span className={cn("grid size-5 place-items-center rounded-full border text-[10px]",
+                      state === "done" && "border-success bg-success text-background", state === "active" && "border-primary text-primary")}>
+                      {state === "done" ? <Check className="size-3" /> : i + 1}
+                    </span>
+                    {stageLabel[s]}
+                  </li>
+                );
+              })}
+            </ol>
+            {job.status === "error" && (
+              <Button size="sm" onClick={() => api.retry(id).then(setJob).catch((e) => setErr(String(e)))}><RefreshCw data-icon="inline-start" /> Retry</Button>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {a && r && (
         <>
-          {job.video_url && <Player src={mediaUrl(job.video_url)} breaks={r.breaks} adSeconds={r.pacing.ad_duration_seconds} duration={a.media.duration} />}
-          <Timeline scenes={a.scenes} breaks={r.breaks} candidates={r.candidates} duration={a.media.duration} />
+          {job.video_url && <Player src={mediaUrl(job.video_url)} breaks={r.breaks} adSeconds={r.pacing.ad_duration_seconds} duration={a.media.duration} seekTo={seekTo} />}
+          <Timeline scenes={a.scenes} breaks={r.breaks} candidates={r.candidates} duration={a.media.duration} onSeek={setSeekTo} />
 
-          <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-            <div className="panel p-4">
-              <h2 className="font-semibold mb-3">Ad breaks ({r.breaks.length})</h2>
-              {r.breaks.map((b, i) => {
-                const blocked = b.brand_rows.filter((x) => x.blocked_by.length);
-                return (
-                  <div key={b.id} className="border-t border-[var(--line)] py-3 text-sm">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-bold">#{i + 1} @ {fmt(b.time)}</span>
-                      <span className="px-2 py-0.5 rounded font-semibold" style={{ background: b.brand.creative?.bg, color: b.brand.creative?.fg }}>{b.brand.name}</span>
-                      <span className="chip chip-ok">safety {b.cut_safety.toFixed(2)}</span>
-                      <span className="chip">{b.source.replace("_", " ")}</span>
-                      <span className="chip">{b.match_method}</span>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ad breaks</CardTitle>
+                <CardDescription>{r.breaks.length} placed · each one explains where, whether and what</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {r.breaks.length === 0 && <p className="text-sm text-muted-foreground">No break met the rules for this episode.</p>}
+                {r.breaks.map((b, i) => {
+                  const blocked = b.brand_rows.filter((x) => x.blocked_by.length);
+                  return (
+                    <div key={b.id} className="space-y-2">
+                      {i > 0 && <Separator className="mb-4" />}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button type="button" onClick={() => setSeekTo(b.time - 4)} className="font-mono text-sm font-semibold hover:underline">{fmt(b.time)}</button>
+                        <span className="rounded-md px-2 py-0.5 text-sm font-semibold" style={{ background: b.brand.creative?.bg, color: b.brand.creative?.fg }}>{b.brand.name}</span>
+                        <Badge variant="outline">cut safety {b.cut_safety.toFixed(2)}</Badge>
+                        <Badge variant="secondary">{sourceLabel[b.source] ?? b.source}</Badge>
+                      </div>
+                      <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        {scenesById[b.scene_before]?.title} <ArrowRight className="size-3.5" /> {scenesById[b.scene_after]?.title}
+                      </p>
+                      <p className="text-sm">{b.rationale}</p>
+                      <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-[auto_1fr]">
+                        <dt className="text-muted-foreground">Why this cut</dt><dd>{b.reasons.join(" · ")}</dd>
+                        <dt className="text-muted-foreground">Selection</dt><dd>{matchLabel[b.match_method] ?? b.match_method}</dd>
+                        {blocked.length > 0 && (<>
+                          <dt className="text-muted-foreground">Blocked here</dt>
+                          <dd className="flex flex-wrap gap-1">{blocked.map((x) => <Badge key={x.brand_id} variant="outline" className="border-destructive/40 text-destructive">{x.brand_id} · {x.blocked_by.map(blockLabel).join(", ")}</Badge>)}</dd>
+                        </>)}
+                        {b.judge && (<>
+                          <dt className="text-muted-foreground">Independent review</dt>
+                          <dd className="flex flex-wrap items-center gap-1">
+                            <ShieldCheck className="size-3.5 text-success" />
+                            <span>cut {b.judge.cut_verdict}, brand {b.judge.brand_verdict}</span>
+                            <span className="text-muted-foreground">— {b.judge.notes}</span>
+                          </dd>
+                        </>)}
+                      </dl>
                     </div>
-                    <div className="muted mt-1">{scenesById[b.scene_before]?.title} → {scenesById[b.scene_after]?.title}</div>
-                    <div className="mt-1">{b.rationale}</div>
-                    <div className="mt-1 text-xs muted">Cut: {b.reasons.join(" · ")}</div>
-                    {b.judge && (
-                      <div className="mt-1 text-xs flex flex-wrap gap-1 items-center">
-                        <span className="muted">Claude judge:</span>
-                        <span className={`chip ${b.judge.cut_verdict === "jarring" ? "chip-bad" : "chip-ok"}`}>cut {b.judge.cut_verdict}</span>
-                        <span className={`chip ${["violation", "mismatch"].includes(b.judge.brand_verdict) ? "chip-bad" : "chip-ok"}`}>brand {b.judge.brand_verdict}</span>
-                        <span className="muted">{b.judge.notes}</span>
-                      </div>
-                    )}
-                    {blocked.length > 0 && (
-                      <div className="mt-1 text-xs flex flex-wrap gap-1 items-center"><span className="muted">Hard-blocked:</span>
-                        {blocked.map((x) => <span key={x.brand_id} className="chip chip-bad">{x.brand_id} ✕ {x.blocked_by.join(",")}</span>)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
 
-            <div className="flex flex-col gap-5">
-              <div className="panel p-4 text-sm">
-                <h2 className="font-semibold mb-2">Pacing rules (Whether)</h2>
-                {(["max_breaks_per_hour", "min_gap_seconds", "max_ad_load_pct", "ad_duration_seconds", "min_cut_safety"] as const).map((k) => (
-                  <label key={k} className="flex items-center gap-2 mb-1.5"><span className="w-44 muted text-xs">{k}</span>
-                    <input type="number" step="any" value={p[k]} onChange={(e) => setPacing({ ...pacing, [k]: Number(e.target.value) })} /></label>
-                ))}
-                <button className="btn mt-2 w-full" onClick={replace} disabled={busy}>{busy ? "Re-placing…" : "Re-run placement (scoring + matching only)"}</button>
-                <div className="muted text-xs mt-2">Also use this after adding a brand in the catalogue — analysis is reused, so it takes seconds.</div>
-              </div>
-
-              {r.judge && r.judge.length > 0 && (
-                <div className="panel p-4 text-sm">
-                  <h2 className="font-semibold mb-2">Judge audit trail</h2>
-                  <div className="muted text-xs mb-2">Gemini proposes, Claude audits. Jarring cuts are replaced; brand violations are re-matched.</div>
-                  {r.judge.map((v, i) => (
-                    <div key={i} className="border-t border-[var(--line)] py-1.5 text-xs">
-                      <span className="font-mono">r{v.round} {fmt(v.time)}</span> <span className="chip">{v.brand_id}</span> cut <b>{v.cut_verdict}</b> · brand <b>{v.brand_verdict}</b> <span className="muted">— {v.notes}</span>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pacing rules</CardTitle>
+                  <CardDescription>Decide whether a break is warranted. Re-placing reuses the analysis and takes seconds.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  {PACING.map((f) => (
+                    <div key={f.key} className="space-y-2">
+                      <div className="flex justify-between text-sm"><Label>{f.label}</Label><span className="font-mono text-muted-foreground">{p[f.key]}{f.unit ?? ""}</span></div>
+                      <Slider min={f.min} max={f.max} step={f.step} value={[p[f.key] ?? f.min]}
+                        onValueChange={(v) => setPacing({ ...pacing, [f.key]: Array.isArray(v) ? v[0] : v })} />
                     </div>
                   ))}
-                </div>
-              )}
-              <div className="panel p-4 text-sm">
-                <h2 className="font-semibold mb-2">Rejected candidates ({r.rejected.length})</h2>
-                <div className="max-h-72 overflow-auto">
-                  {r.rejected.sort((x, y) => x.time - y.time).map((c) => (
-                    <div key={c.id} className="border-t border-[var(--line)] py-1.5 text-xs">
-                      <span className="font-mono">{fmt(c.time)}</span> <span className="chip">{c.cut_safety.toFixed(2)}</span> <span className="muted">{c.rejected_because}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                  <Button className="w-full" onClick={replace} disabled={busy}><RefreshCw data-icon="inline-start" className={busy ? "animate-spin" : ""} /> {busy ? "Re-placing…" : "Re-run placement"}</Button>
+                </CardContent>
+              </Card>
+
+              <Collapsible>
+                <Card>
+                  <CollapsibleTrigger className="w-full text-left">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">Other cuts considered <ChevronDown className="size-4 text-muted-foreground" /></CardTitle>
+                      <CardDescription>{r.rejected.length} candidates and the rule that ruled each one out</CardDescription>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="max-h-80 space-y-2 overflow-auto text-sm">
+                      {[...r.rejected].sort((x, y) => x.time - y.time).map((c) => (
+                        <div key={c.id} className="flex gap-3">
+                          <button type="button" className="font-mono text-xs hover:underline" onClick={() => setSeekTo(c.time - 3)}>{fmt(c.time)}</button>
+                          <span className="text-muted-foreground">{c.rejected_because}</span>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
             </div>
           </div>
         </>

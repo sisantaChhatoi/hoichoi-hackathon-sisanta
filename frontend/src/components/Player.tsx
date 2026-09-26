@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Break, fmt } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { cn } from "cn";
 
 /** HTML5 player that honours the ad-break manifest: pauses at each cue point,
  *  plays the matched creative, then resumes content. */
-export default function Player({ src, breaks, adSeconds, duration }: { src: string; breaks: Break[]; adSeconds: number; duration: number }) {
+export default function Player({ src, breaks, adSeconds, duration, seekTo }:
+  { src: string; breaks: Break[]; adSeconds: number; duration: number; seekTo?: number | null }) {
   const video = useRef<HTMLVideoElement>(null);
-  const adVideo = useRef<HTMLVideoElement>(null);
   const [ad, setAd] = useState<Break | null>(null);
   const [left, setLeft] = useState(0);
   const [useCard, setUseCard] = useState(false); // creative mp4 missing → colour card fallback
@@ -31,44 +33,50 @@ export default function Player({ src, breaks, adSeconds, duration }: { src: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ad, useCard]);
 
+  useEffect(() => { if (seekTo != null) seek(seekTo); }, [seekTo]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function resume() { setAd(null); video.current?.play(); }
   function seek(to: number) { const v = video.current; if (!v) return; v.currentTime = Math.max(0, to); lastT.current = v.currentTime; v.play(); }
 
   const c = ad?.brand.creative ?? {};
   const adSrc = ad ? (c.video_url ?? `/creatives/${ad.brand.id}.mp4`) : "";
   return (
-    <div className="panel overflow-hidden">
-      <div className="relative bg-black aspect-video">
-        <video ref={video} src={src} controls className="w-full h-full" onTimeUpdate={onTime} />
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="relative aspect-video bg-black">
+        <video ref={video} src={src} controls className="h-full w-full" onTimeUpdate={onTime} />
         {ad && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8" style={{ background: c.bg ?? "#222", color: c.fg ?? "#fff" }}>
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center" style={{ background: c.bg ?? "#222", color: c.fg ?? "#fff" }}>
             {!useCard ? (
-              <video ref={adVideo} src={adSrc} autoPlay className="absolute inset-0 w-full h-full object-contain" onEnded={resume} onError={() => setUseCard(true)} />
+              <video src={adSrc} autoPlay className="absolute inset-0 h-full w-full object-contain" onEnded={resume} onError={() => setUseCard(true)} />
             ) : (
               <>
-                <div className="text-xs uppercase tracking-widest opacity-70 mb-3">Advertisement · {ad.brand.category}</div>
-                <div className="text-5xl font-extrabold mb-3">{ad.brand.name}</div>
+                <div className="mb-3 text-xs uppercase tracking-widest opacity-70">Advertisement · {ad.brand.category}</div>
+                <div className="mb-3 text-5xl font-extrabold">{ad.brand.name}</div>
                 <div className="text-xl opacity-90">{ad.brand.tagline}</div>
               </>
             )}
-            <div className="absolute bottom-3 right-4 text-xs opacity-80 flex gap-3 items-center">
-              {useCard && <span>{left}s</span>}
-              <button className="btn-ghost !py-1 !px-2" onClick={resume}>Skip ad</button>
+            <div className="absolute bottom-3 right-4 flex items-center gap-3 text-xs">
+              {useCard && <span className="opacity-80">{left}s</span>}
+              <Button size="sm" variant="secondary" onClick={resume}>Skip</Button>
             </div>
-            <div className="absolute top-3 left-4 text-xs opacity-80 max-w-md text-left">Why here: {ad.rationale}</div>
           </div>
         )}
       </div>
-      {/* cue bar */}
-      <div className="relative h-8 mx-3 my-2">
-        <div className="absolute top-3.5 left-0 right-0 h-1 rounded bg-[var(--line)]" />
-        <div className="absolute top-3.5 left-0 h-1 rounded" style={{ width: `${(t / duration) * 100}%`, background: "var(--muted)" }} />
-        {breaks.map((b) => (
-          <button key={b.id} title={`${fmt(b.time)} · ${b.brand.name}`} onClick={() => seek(b.time - 4)}
-            className="absolute -top-0.5 w-2 h-8 rounded-sm hover:scale-125 transition" style={{ left: `calc(${(b.time / duration) * 100}% - 4px)`, background: played.current.has(b.id) ? "var(--ok)" : "var(--accent)" }} />
-        ))}
+      <div className="px-4 pb-3 pt-2">
+        <div className="relative h-7">
+          <div className="absolute inset-x-0 top-3 h-1 rounded-full bg-muted" />
+          <div className="absolute left-0 top-3 h-1 rounded-full bg-muted-foreground/60" style={{ width: `${(t / duration) * 100}%` }} />
+          {breaks.map((b) => (
+            <button key={b.id} type="button" title={`${fmt(b.time)} · ${b.brand.name}`} onClick={() => seek(b.time - 4)}
+              className={cn("absolute top-0.5 h-6 w-1.5 rounded-sm transition hover:scale-y-125", played.current.has(b.id) ? "bg-success" : "bg-primary")}
+              style={{ left: `calc(${(b.time / duration) * 100}% - 3px)` }} />
+          ))}
+        </div>
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Click a marker to watch that break</span>
+          <span className="font-mono">{fmt(t)} / {fmt(duration)}</span>
+        </div>
       </div>
-      <div className="px-3 pb-3 text-xs muted">Click a marker to jump 4s before that break and watch the cut-over. {fmt(t)} / {fmt(duration)}</div>
     </div>
   );
 }
