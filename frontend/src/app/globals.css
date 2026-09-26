@@ -148,3 +148,16 @@
 
 h1, .font-serif { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.01em; }
 .font-brand { font-family: var(--font-brand); font-variation-settings: "opsz" 48, "SOFT" 30; }
+
+/* Soft entrance for page content: fade + a few px of lift, staggered per element. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.rise-1 { animation-delay: 0.05s; }
+.rise-2 { animation-delay: 0.15s; }
+.rise-3 { animation-delay: 0.25s; }
+.rise-4 { animation-delay: 0.35s; }
+.rise-5 { animation-delay: 0.5s; }
+@media (prefers-reduced-motion: reduce) { .rise { animation: none; } }

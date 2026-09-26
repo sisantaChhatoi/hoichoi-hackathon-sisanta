@@ -61,13 +61,13 @@ export default function Home() {
       <section className="grid items-center gap-12 py-2 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-16 lg:pr-16">
         <div className="space-y-8">
           <div className="space-y-4">
-            <h1 className="text-4xl leading-tight">Ad breaks that respect the story</h1>
-            <p className="max-w-lg text-muted-foreground">
+            <h1 className="rise rise-1 text-4xl leading-tight">Ad breaks that respect the story</h1>
+            <p className="rise rise-2 max-w-lg text-muted-foreground">
               Cuepoint watches an episode the way an editor would, then places every break where it belongs and explains why.
               The result is a VMAP manifest, a decision report, and a preview you can play right here.
             </p>
           </div>
-          <ul className="max-w-lg space-y-4">
+          <ul className="rise rise-3 max-w-lg space-y-4">
             {POINTS.map(([k, v]) => (
               <li key={k} className="grid grid-cols-[84px_1fr] gap-3 text-sm">
                 <span className="pt-0.5 font-mono text-xs uppercase tracking-wide text-muted-foreground">{k}</span>
@@ -77,7 +77,7 @@ export default function Home() {
           </ul>
         </div>
 
-        <form onSubmit={submit} className="space-y-5">
+        <form onSubmit={submit} className="rise rise-4 space-y-5">
           <div
             onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
             onDragLeave={() => setDrag(false)}
@@ -108,7 +108,7 @@ export default function Home() {
         </form>
       </section>
 
-      <section className="space-y-4">
+      <section className="rise rise-5 space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold">Episodes</h2>
           <span className="text-sm text-muted-foreground">{err.startsWith("Couldn") ? err : jobs.length ? `${jobs.length} analysed or in progress` : ""}</span>
