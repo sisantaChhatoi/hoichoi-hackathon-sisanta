@@ -14,9 +14,8 @@ GEMINI_MODELS = _models("GEMINI_MODELS", "gemini-3.8-flash,gemini-3.7-flash,gemi
 # Brand matching / negative-context judgement (small text call → strongest model first)
 GEMINI_TEXT_MODELS = _models("GEMINI_TEXT_MODELS", "gemini-3.1-pro-preview,gemini-3.8-flash,gemini-3.7-flash")
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
-SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
-SUPABASE_BUCKET = os.environ.get("SUPABASE_BUCKET", "media")
+# Postgres DSN (Supabase → Connect → Session/Transaction pooler URI). Empty = local-only persistence.
+SUPABASE_DB_URL = os.environ.get("SUPABASE_DB_URL", "")
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", "./data_local")).resolve()
 CACHE_DIR = DATA_DIR / "cache"

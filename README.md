@@ -63,8 +63,8 @@ cd frontend && pnpm install && pnpm dev                          # http://localh
 
 ## Deploy
 
-- **Backend → Render** (Docker, `render.yaml`): set `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`.
-  Render's disk is ephemeral; jobs are mirrored to Supabase (`docs/supabase.sql`).
+- **Backend → Render** (Docker, `render.yaml`): set `GEMINI_API_KEY`, `SUPABASE_DB_URL` (Supabase pooler DSN), `CREATIVE_BASE_URL`.
+  Render's disk is ephemeral; jobs are mirrored to Postgres (table auto-created).
 - **Frontend → Vercel**: set `NEXT_PUBLIC_API_URL`; connect a Blob store (adds `BLOB_READ_WRITE_TOKEN`) so browser
   uploads go straight to Vercel Blob and the player streams from there.
 

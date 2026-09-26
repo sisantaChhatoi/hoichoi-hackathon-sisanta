@@ -13,9 +13,7 @@ services:
         value: gemini-3.8-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3.5-flash-lite
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_KEY
+      - key: SUPABASE_DB_URL
         sync: false
       - key: CORS_ORIGINS
         value: "*"

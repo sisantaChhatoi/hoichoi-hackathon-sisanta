@@ -27,6 +27,13 @@ Auto-DQ: hard-coded timestamps/brands, ANY negative-context violation on held-ou
 - ffmpeg 9: use `-fps_mode vfr` (not `-vsync`). Music beds defeat `silencedetect` → also use Gemini speech gaps as pauses.
 - Gemini speech passages are coarse/over-merged: a ≥1s ffmpeg silence overrides "inside speech".
 
+- Judge (`pipeline/judge.py`): provider = Anthropic key → Bedrock → **Gemini 3.1 Pro (what we use; user has no Anthropic API key)**.
+  Vetoes jarring cuts (re-select) / brand violations (re-match), max 2 rounds; still-jarring breaks are dropped.
+- Video storage: Supabase Storage free tier caps files at 50 MB → videos go to **Vercel Blob** (Hobby: 1 GB, 10 GB transfer).
+  Only pre-seed ~3 smallest samples. Supabase = jobs table only. Fresh Supabase projects throw PGRST002 for a while; store is circuit-broken.
+- Paid Gemini key (AIza…) in `backend/.env`; Pro available. All 6 samples analysed locally in `backend/data_local` (~4–5 min each).
+- Deploy: Render blueprint `render.yaml` (Docker, SHOT_DETECT=0), Vercel root `frontend/`, `frontend/scripts/seed.mjs` pre-seeds demo jobs.
+
 ## Working style
 - Be token-frugal: no re-reading files already in context, small targeted edits, no long file dumps.
 - Never print the API key. `.env` files are gitignored.
