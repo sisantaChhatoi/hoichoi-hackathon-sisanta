@@ -1,5 +1,7 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 
+export const dynamic = "force-dynamic"; // never pre-render: the token check must run per request
+
 /** Issues short-lived client-upload tokens so the browser streams the video
  *  straight to Vercel Blob (bypasses backend body limits, survives Render restarts). */
 export async function POST(request: Request) {
