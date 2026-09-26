@@ -20,8 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="aurora" aria-hidden><span className="a1" /></div>
         <TooltipProvider>
           <Nav />
-          <main className="mx-auto w-full max-w-[1200px] px-6 py-8 lg:px-8">{children}</main>
-          <footer className="mx-auto max-w-[1200px] px-6 pb-8 text-xs text-muted-foreground lg:px-8">
+          <main className="mx-auto w-full max-w-[1320px] px-5 py-8 lg:px-6">{children}</main>
+          <footer className="mx-auto max-w-[1320px] px-5 pb-8 text-xs text-muted-foreground lg:px-6">
             All brands in the catalogue are fictional.
           </footer>
         </TooltipProvider>

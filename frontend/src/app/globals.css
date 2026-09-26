@@ -91,6 +91,10 @@
   }
   html {
     color-scheme: light;
+    overscroll-behavior: none;
+  }
+  body {
+    overscroll-behavior: none;
   }
   body {
     @apply bg-background text-foreground antialiased;
