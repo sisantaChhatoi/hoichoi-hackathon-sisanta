@@ -53,4 +53,4 @@ DEFAULT_PACING = {
 # failed chunk can be retried alone.
 CHUNK_SECONDS = 300
 CHUNK_WORKERS = int(os.environ.get("CHUNK_WORKERS", "4"))  # concurrent Gemini chunk calls
-VIDEO_FPS = 1.0
+VIDEO_FPS = 0.5  # frames per second the model sees; audio stays continuous

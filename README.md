@@ -15,7 +15,7 @@ Give Cuepoint an episode and it answers the three questions an ad-ops editor wou
 flowchart TD
     V([Episode.mp4]) --> U[Upload to storage]
     U --> F["ffmpeg (local, cheap)\nsilence map · shot cuts"]
-    U --> G["Gemini Flash · Files API\nwhole video, 5-min chunks @ 1 fps"]
+    U --> G["Gemini Flash · Files API\nwhole video, 5-min chunks @ 0.5 fps"]
     G --> S["Scenes\ntitle · summary · dominant activity\ncontext tags (controlled vocabulary)\nmood · sensitive · boundary quality"]
     G --> P["Speech passages\n+ intra-scene pause points"]
 
@@ -56,12 +56,12 @@ flowchart TD
 ```
 
 ### Perception
-The episode is uploaded **once** to Gemini's Files API and read at a deliberately low rate — one frame per second plus audio, in 5-minute chunks analysed four at a time — so a 25-minute episode costs about 120k tokens and ~25 seconds of model time. This single pass is what tells the system what each scene is about, its mood, who is speaking and when; nothing downstream re-sends video. Results are cached by file hash, so re-placing, re-judging or tuning pacing never touches the model again. In parallel, ffmpeg produces two cheap, precise signals locally: a **silence map** (sub-second) and **shot changes**. Scene analysis is schema-constrained: every scene is tagged only from a controlled vocabulary (`backend/app/vocab.py`), which is what makes brand blocking deterministic later.
+The episode is uploaded **once** to Gemini's Files API and read at a deliberately low rate — one frame every two seconds plus continuous audio, in 5-minute chunks analysed four at a time — so a 25-minute episode costs about 90k tokens and ~30 seconds of model time. This single pass is what tells the system what each scene is about, its mood, who is speaking and when; nothing downstream re-sends video. Results are cached by file hash, so re-placing, re-judging or tuning pacing never touches the model again. In parallel, ffmpeg produces two cheap, precise signals locally: a **silence map** (sub-second) and **shot changes**. Scene analysis is schema-constrained: every scene is tagged only from a controlled vocabulary (`backend/app/vocab.py`), which is what makes brand blocking deterministic later.
 
 Why not just ask the model "where do the ads go"? Because the parts that must be exact are the parts a model is worst at: pacing arithmetic, a negative-context block that must never be talked around, and cut timing to the frame. The model contributes understanding; code makes the decisions, so every one of them can be shown.
 
 ### Where
-Only semantic points become candidates — scene boundaries and pause points Gemini flagged inside long scenes. A quiet moment in the middle of a tense scene never becomes a break because nothing proposes it. The model's timestamps are whole seconds (it samples at 1 fps), so each candidate is **snapped** to the nearest real pause from ffmpeg's silence map (~10 ms precision) and scored from explainable components: pause length, the model's own boundary quality, and whether a shot change coincides. A cut that still lands inside dialogue is never used. In practice a fifth of candidates move by up to a few seconds, and several per episode are dropped — those would have been mid-sentence cuts.
+Only semantic points become candidates — scene boundaries and pause points Gemini flagged inside long scenes. A quiet moment in the middle of a tense scene never becomes a break because nothing proposes it. The model's timestamps are whole seconds (it samples at 0.5 fps), so each candidate is **snapped** to the nearest real pause from ffmpeg's silence map (~10 ms precision) and scored from explainable components: pause length, the model's own boundary quality, and whether a shot change coincides. A cut that still lands inside dialogue is never used. In practice a fifth of candidates move by up to a few seconds, and several per episode are dropped — those would have been mid-sentence cuts.
 
 ### Whether
 Pacing rules decide how many breaks an episode may carry and where they may not go. Selection is greedy best-first, and every rejected candidate keeps the rule that rejected it ("would cut mid-dialogue", "break budget reached", "less than 5 min from another break", …). Rules are adjustable per episode and re-run in seconds without re-analysing.

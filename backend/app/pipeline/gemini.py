@@ -208,7 +208,7 @@ def _parse_mmss(s: str) -> float:
 
 
 def analyze_chunk(file: dict, start: float, end: float, log=print) -> dict:
-    key = f"scene_{file['sha1']}_{int(start)}_{int(end)}_{PROMPT_VERSION}.json"
+    key = f"scene_{file['sha1']}_{int(start)}_{int(end)}_{PROMPT_VERSION}_fps{config.VIDEO_FPS:g}.json"
     cache = config.CACHE_DIR / key
     if cache.exists():
         log(f"gemini: cache hit {int(start)}-{int(end)}s")
