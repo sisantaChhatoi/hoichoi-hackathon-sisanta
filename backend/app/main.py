@@ -126,6 +126,15 @@ def jobs():
     return store.list_jobs()
 
 
+@app.delete("/jobs/{job_id}")
+def delete_job(job_id: str):
+    store.delete_job(job_id)
+    p = _local_video_path(job_id)
+    if p.exists() or p.is_symlink():
+        p.unlink()
+    return {"ok": True}
+
+
 @app.get("/jobs/{job_id}")
 def job(job_id: str, full: bool = False):
     j = store.get_job(job_id)

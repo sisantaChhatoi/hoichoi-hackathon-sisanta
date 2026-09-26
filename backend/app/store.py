@@ -111,6 +111,13 @@ def list_jobs() -> list[dict]:
     return [{k: v for k, v in j.items() if k not in ("analysis", "result", "log")} for j in out]
 
 
+def delete_job(job_id: str) -> None:
+    p = _path(job_id)
+    if p.exists():
+        p.unlink()
+    _run(lambda c: c.execute("delete from public.jobs where id = %s", (job_id,)))
+
+
 def update(job_id: str, **fields) -> dict:
     job = get_job(job_id) or {"id": job_id}
     job.update(fields)

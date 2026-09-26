@@ -62,6 +62,8 @@ export default function Home() {
             <li key={j.id} className="py-3 flex items-center gap-3">
               <Link href={`/jobs/${j.id}`} className="font-medium hover:underline flex-1 truncate">{j.title}</Link>
               <Status job={j} />
+              <button className="text-xs muted hover:text-white" title="Remove job"
+                onClick={() => { if (confirm(`Remove "${j.title}"?`)) api.deleteJob(j.id).then(() => setJobs((s) => s.filter((x) => x.id !== j.id))); }}>✕</button>
             </li>
           ))}
         </ul>
