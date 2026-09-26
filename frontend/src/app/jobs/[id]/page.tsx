@@ -126,11 +126,6 @@ export default function JobPage() {
                         <button type="button" onClick={() => setSeekTo(b.time - 4)} className="font-mono text-lg font-semibold hover:underline">{fmt(b.time)}</button>
                         <p className="text-xs text-muted-foreground">{sourceLabel[b.source] ?? b.source}</p>
                         <p className="font-mono text-xs text-muted-foreground">safety {b.cut_safety.toFixed(2)}</p>
-                        {b.status !== "review" && (
-                          <button type="button" onClick={() => decide(b.id, "remove")} className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive">
-                            <X className="size-3" /> Remove
-                          </button>
-                        )}
                       </div>
                       <div className="space-y-2">
                         {b.status === "review" && (
@@ -148,6 +143,11 @@ export default function JobPage() {
                           <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                             {scenesById[b.scene_before]?.title} <ArrowRight className="size-3.5" /> {scenesById[b.scene_after]?.title}
                           </span>
+                          {b.status !== "review" && (
+                            <Button size="xs" variant="outline" className="ml-auto" onClick={() => decide(b.id, "remove")}>
+                              <X data-icon="inline-start" /> Remove break
+                            </Button>
+                          )}
                         </div>
                         <p className="text-sm">{b.rationale}</p>
                         <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-[130px_1fr]">
