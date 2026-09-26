@@ -74,6 +74,14 @@ export default function JobPage() {
                     <div className="muted mt-1">{scenesById[b.scene_before]?.title} → {scenesById[b.scene_after]?.title}</div>
                     <div className="mt-1">{b.rationale}</div>
                     <div className="mt-1 text-xs muted">Cut: {b.reasons.join(" · ")}</div>
+                    {b.judge && (
+                      <div className="mt-1 text-xs flex flex-wrap gap-1 items-center">
+                        <span className="muted">Claude judge:</span>
+                        <span className={`chip ${b.judge.cut_verdict === "jarring" ? "chip-bad" : "chip-ok"}`}>cut {b.judge.cut_verdict}</span>
+                        <span className={`chip ${["violation", "mismatch"].includes(b.judge.brand_verdict) ? "chip-bad" : "chip-ok"}`}>brand {b.judge.brand_verdict}</span>
+                        <span className="muted">{b.judge.notes}</span>
+                      </div>
+                    )}
                     {blocked.length > 0 && (
                       <div className="mt-1 text-xs flex flex-wrap gap-1 items-center"><span className="muted">Hard-blocked:</span>
                         {blocked.map((x) => <span key={x.brand_id} className="chip chip-bad">{x.brand_id} ✕ {x.blocked_by.join(",")}</span>)}
@@ -95,6 +103,17 @@ export default function JobPage() {
                 <div className="muted text-xs mt-2">Also use this after adding a brand in the catalogue — analysis is reused, so it takes seconds.</div>
               </div>
 
+              {r.judge && r.judge.length > 0 && (
+                <div className="panel p-4 text-sm">
+                  <h2 className="font-semibold mb-2">Judge audit trail</h2>
+                  <div className="muted text-xs mb-2">Gemini proposes, Claude audits. Jarring cuts are replaced; brand violations are re-matched.</div>
+                  {r.judge.map((v, i) => (
+                    <div key={i} className="border-t border-[var(--line)] py-1.5 text-xs">
+                      <span className="font-mono">r{v.round} {fmt(v.time)}</span> <span className="chip">{v.brand_id}</span> cut <b>{v.cut_verdict}</b> · brand <b>{v.brand_verdict}</b> <span className="muted">— {v.notes}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="panel p-4 text-sm">
                 <h2 className="font-semibold mb-2">Rejected candidates ({r.rejected.length})</h2>
                 <div className="max-h-72 overflow-auto">

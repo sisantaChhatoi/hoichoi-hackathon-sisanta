@@ -14,15 +14,18 @@ export type Candidate = {
   id: string; time: number; anchor_time: number; source: string; scene_before: string; scene_after: string;
   cut_safety: number; components: Record<string, number>; reasons: string[]; mid_speech: boolean; rejected_because?: string;
 };
+export type Verdict = { break_id: string; cut_verdict: string; brand_verdict: string; confidence: number; notes: string };
 export type Break = Candidate & {
   brand: Brand; match_method: string; rationale: string;
   brand_rows: { brand_id: string; blocked_by: string[]; affinity: number }[];
+  judge?: Verdict;
 };
 export type Job = {
   id: string; title: string; status: "queued" | "running" | "done" | "error"; stage?: string; progress?: number;
   message?: string; created_at: number; video_url?: string | null; log?: string[];
   analysis?: { media: { duration: number; width: number; height: number }; scenes: Scene[]; speech: { start: number; end: number }[]; silence_count: number; shot_cut_count: number } | null;
-  result?: { pacing: Record<string, number>; candidates: Candidate[]; rejected: Candidate[]; breaks: Break[]; vmap: string } | null;
+  result?: { pacing: Record<string, number>; candidates: Candidate[]; rejected: Candidate[]; breaks: Break[]; vmap: string;
+    judge?: (Verdict & { round: number; brand_id: string; time: number })[] } | null;
 };
 
 async function j<T>(r: Response): Promise<T> {
