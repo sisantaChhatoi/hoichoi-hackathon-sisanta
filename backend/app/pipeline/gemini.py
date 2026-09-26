@@ -20,6 +20,21 @@ class GeminiError(RuntimeError):
     pass
 
 
+def _read_cache(path: Path):
+    """Parse a cache file; a truncated/corrupt one (e.g. written during a restart) is discarded."""
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        path.unlink(missing_ok=True)
+        return None
+
+
+def _write_cache(path: Path, data) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False))
+    tmp.replace(path)  # atomic on POSIX
+
+
 def _headers(extra=None):
     h = {"x-goog-api-key": config.GEMINI_API_KEY}
     h.update(extra or {})
@@ -39,8 +54,8 @@ def upload_video(path: str, log=print) -> dict:
     """Upload (or reuse a still-ACTIVE upload of) a video. Returns {uri, name, sha1}."""
     sha = _sha1(path)
     cache = config.CACHE_DIR / f"file_{sha}.json"
-    if cache.exists():
-        meta = json.loads(cache.read_text())
+    meta = _read_cache(cache) if cache.exists() else None
+    if meta:
         r = httpx.get(f"{BASE}/v1beta/{meta['name']}", headers=_headers(), timeout=30)
         if r.status_code == 200 and r.json().get("state") == "ACTIVE":
             log(f"gemini: reusing uploaded file {meta['name']}")
@@ -76,7 +91,7 @@ def upload_video(path: str, log=print) -> dict:
         if file.get("state") != "ACTIVE":
             raise GeminiError(f"file not active: {file}")
     meta = {"uri": file["uri"], "name": file["name"], "sha1": sha}
-    cache.write_text(json.dumps(meta))
+    _write_cache(cache, meta)
     return meta
 
 
@@ -221,9 +236,10 @@ def _parse_mmss(s: str) -> float:
 def analyze_chunk(file: dict, start: float, end: float, log=print) -> dict:
     key = f"scene_{file['sha1']}_{int(start)}_{int(end)}_{PROMPT_VERSION}_fps{config.VIDEO_FPS:g}.json"
     cache = config.CACHE_DIR / key
-    if cache.exists():
+    cached = _read_cache(cache) if cache.exists() else None
+    if cached:
         log(f"gemini: cache hit {int(start)}-{int(end)}s")
-        return json.loads(cache.read_text())
+        return cached
     parts = [
         {"file_data": {"file_uri": file["uri"], "mime_type": "video/mp4"},
          "video_metadata": {"start_offset": f"{int(start)}s", "end_offset": f"{int(end)}s", "fps": config.VIDEO_FPS}},
@@ -255,7 +271,7 @@ def analyze_chunk(file: dict, start: float, end: float, log=print) -> dict:
             pauses.append({"time": round(t, 2), "reason": p.get("reason", ""),
                            "quality": float(p.get("quality", 0.5))})
     out = {"scenes": scenes, "speech": speech, "pause_points": pauses, "chunk": [start, end]}
-    cache.write_text(json.dumps(out, ensure_ascii=False))
+    _write_cache(cache, out)
     return out
 
 
