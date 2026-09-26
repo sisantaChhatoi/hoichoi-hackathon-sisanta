@@ -142,4 +142,22 @@ def update(job_id: str, **fields) -> dict:
 
 
 def set_progress(job_id: str, stage: str, pct: float, msg: str = "") -> None:
-    update(job_id, status="running", stage=stage, progress=round(pct, 1), message=msg)
+    job = get_job(job_id) or {"id": job_id}
+    update(job_id, status="running", stage=stage, progress=round(pct, 1), message=msg, eta_seconds=_eta(job, pct))
+
+
+def _eta(job: dict, pct: float) -> int | None:
+    """Seconds remaining. Before we know the video length it is unknown; then a
+    duration-based estimate (~9 s per content minute + fixed overhead), refined by
+    the observed rate once the run is well under way."""
+    duration = job.get("duration")
+    if not duration:
+        return None
+    expected_total = 45 + 9 * duration / 60
+    est = expected_total * (1 - pct / 100)
+    started = job.get("started_at") or job.get("created_at")
+    if started and pct >= 20:
+        elapsed = time.time() - started
+        rate_based = elapsed / pct * (100 - pct)
+        est = 0.5 * est + 0.5 * rate_based
+    return max(5, int(est))

@@ -36,3 +36,10 @@ export const moodColor: Record<string, string> = {
   neutral: "var(--muted-foreground)", dramatic: "var(--chart-3)", tense: "var(--chart-3)",
   suspenseful: "var(--chart-4)", sad: "var(--chart-5)", grim: "var(--destructive)",
 };
+
+export function etaLabel(sec?: number | null): string {
+  if (sec == null) return "";
+  if (sec < 60) return "under a minute left";
+  const m = Math.round(sec / 60);
+  return `about ${m} min left`;
+}

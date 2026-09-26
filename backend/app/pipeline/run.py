@@ -22,6 +22,7 @@ def analyze(job_id: str, video_path: str) -> dict:
     log = _logger(job_id)
     store.set_progress(job_id, "probe", 2, "Reading media info")
     info = audio.probe(video_path)
+    store.update(job_id, duration=info["duration"], started_at=time.time())
     log(f"media: {info['duration']:.1f}s {info['width']}x{info['height']} {info['size_bytes']/1e6:.0f}MB")
 
     store.set_progress(job_id, "silence", 5, "Mapping silences")

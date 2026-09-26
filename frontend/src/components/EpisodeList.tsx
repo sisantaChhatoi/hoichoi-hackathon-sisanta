@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Trash2 } from "lucide-react";
 import { api, Job, fmt } from "@/lib/api";
-import { stageLabel } from "@/lib/copy";
+import { etaLabel, stageLabel } from "@/lib/copy";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -69,7 +69,7 @@ function Status({ job }: { job: Job }) {
   return (
     <div className="flex items-center gap-2">
       <Progress value={job.progress ?? 0} className="w-16" />
-      <span className="text-xs text-muted-foreground">{stageLabel[job.stage ?? "queued"] ?? job.stage}</span>
+      <span className="text-xs text-muted-foreground">{Math.round(job.progress ?? 0)}% · {job.eta_seconds != null ? etaLabel(job.eta_seconds) : stageLabel[job.stage ?? "queued"] ?? job.stage}</span>
     </div>
   );
 }

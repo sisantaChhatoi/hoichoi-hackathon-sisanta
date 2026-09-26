@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Nav } from "@/components/Nav";
+import { JobWatcher } from "@/components/JobWatcher";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -24,6 +26,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <footer className="mx-auto max-w-[1320px] px-5 pb-8 text-xs text-muted-foreground lg:px-6">
             All brands in the catalogue are fictional.
           </footer>
+          <JobWatcher />
+          <Toaster position="bottom-right" richColors closeButton toastOptions={{ classNames: { toast: "font-sans" } }} />
         </TooltipProvider>
       </body>
     </html>

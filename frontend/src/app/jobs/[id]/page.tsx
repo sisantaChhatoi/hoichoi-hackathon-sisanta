@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowRight, Check, ChevronDown, Download, FileJson, RefreshCw, ShieldCheck } from "lucide-react";
 import { API, api, Job, Scene, fmt, mediaUrl } from "@/lib/api";
-import { STAGES, blockLabel, matchLabel, sourceLabel, stageLabel } from "@/lib/copy";
+import { STAGES, blockLabel, etaLabel, matchLabel, sourceLabel, stageLabel } from "@/lib/copy";
 import Player from "@/components/Player";
 import Timeline from "@/components/Timeline";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,9 @@ export default function JobPage() {
         <section className="max-w-3xl space-y-4">
           <div className="space-y-1">
             <h2 className="text-base font-medium">{job.status === "error" ? "Analysis failed" : "Analysing"}</h2>
-            <p className="text-sm text-muted-foreground">{job.status === "error" ? job.message : job.message || stageLabel[job.stage ?? "queued"]}</p>
+            <p className="text-sm text-muted-foreground">
+              {job.status === "error" ? job.message : <>{job.message || stageLabel[job.stage ?? "queued"]}<span className="mx-2">·</span><span className="font-mono">{Math.round(job.progress ?? 0)}%</span>{job.eta_seconds != null && <span className="mx-2">·</span>}{etaLabel(job.eta_seconds)}</>}
+            </p>
           </div>
           {job.status !== "error" && <Progress value={job.progress ?? 0} />}
           <ol className="grid gap-2 sm:grid-cols-5">
