@@ -5,7 +5,7 @@ semantically coherent scenes, scores every possible break point for *where* / *w
 to the most contextually appropriate brand from a synthetic catalogue (*what*), and emits a **VMAP 1.0 manifest**,
 a **debug JSON**, and a **playable demo** that cuts to the ad and resumes.
 
-- Live demo: _TBD_ · Backend API: _TBD_ · Video walkthrough: _TBD_
+- Live demo: https://hoichoi-hackathon-sisanta.vercel.app · API: https://hoichoi-hackathon-sisanta.onrender.com · Video walkthrough: _TBD_
 
 ## How it works
 
