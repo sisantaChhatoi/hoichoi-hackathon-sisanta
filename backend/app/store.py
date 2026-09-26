@@ -13,8 +13,6 @@ from typing import Any
 from . import config
 
 _lock = threading.Lock()
-_db_lock = threading.Lock()
-_conn = None
 _db_down_until = 0.0
 _last_mirror: dict[str, tuple[float, str]] = {}   # job id → (time, status)
 MIRROR_INTERVAL = 4.0
@@ -29,36 +27,46 @@ create table if not exists public.jobs (
 """
 
 
-def _db():
-    """Persistent psycopg connection (autocommit, no server-side prepares — the
-    Supabase pooler runs in transaction mode)."""
-    global _conn
-    if not config.SUPABASE_DB_URL:
-        return None
-    if _conn is None or _conn.closed:
-        import psycopg
-        _conn = psycopg.connect(config.SUPABASE_DB_URL, autocommit=True, prepare_threshold=None, connect_timeout=10)
-        _conn.execute(DDL)
-    return _conn
+_conn = None
+_db_lock = threading.Lock()
+
+
+def _connect():
+    import psycopg
+    conn = psycopg.connect(
+        config.SUPABASE_DB_URL, autocommit=True, prepare_threshold=None, connect_timeout=5,
+        options="-c statement_timeout=8000",
+        keepalives=1, keepalives_idle=20, keepalives_interval=5, keepalives_count=3,
+    )
+    conn.execute(DDL)
+    return conn
 
 
 def _run(fn):
-    """Run fn(conn) under the circuit breaker; returns None on failure."""
+    """Run fn(conn) on a persistent connection under a circuit breaker; None on failure.
+    Keepalives + a statement timeout mean a dead socket surfaces as an error (and a
+    reconnect) instead of a hang; the lock has a timeout so callers never pile up."""
     global _conn, _db_down_until
     if not config.SUPABASE_DB_URL or time.time() < _db_down_until:
         return None
-    with _db_lock:
+    if not _db_lock.acquire(timeout=3):
+        return None
+    try:
+        if _conn is None or _conn.closed:
+            _conn = _connect()
+        return fn(_conn)
+    except Exception as e:
+        print("db error, reconnecting on next call:", str(e)[:160])
         try:
-            return fn(_db())
-        except Exception as e:
-            print("db error, pausing mirroring 30s:", str(e)[:160])
-            _db_down_until = time.time() + 30
-            try:
-                if _conn:
-                    _conn.close()
-            finally:
-                _conn = None
-            return None
+            if _conn:
+                _conn.close()
+        except Exception:
+            pass
+        _conn = None
+        _db_down_until = time.time() + 10
+        return None
+    finally:
+        _db_lock.release()
 
 
 def _path(job_id: str):
