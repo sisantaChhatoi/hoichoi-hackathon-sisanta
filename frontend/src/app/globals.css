@@ -139,11 +139,7 @@
   will-change: transform;
 }
 .aurora .a1 { width: 50vw; height: 50vw; left: -12vw; top: -22vw; background: oklch(0.9 0.05 250); animation: drift1 26s ease-in-out infinite alternate; }
-.aurora .a2 { width: 42vw; height: 42vw; right: -10vw; top: -16vw; background: oklch(0.93 0.05 60); animation: drift2 32s ease-in-out infinite alternate; }
-.aurora .a3 { width: 45vw; height: 45vw; left: 30vw; bottom: -30vw; background: oklch(0.92 0.045 300); animation: drift3 38s ease-in-out infinite alternate; }
 @keyframes drift1 { from { transform: translate(0, 0) scale(1); } to { transform: translate(12vw, 8vw) scale(1.15); } }
-@keyframes drift2 { from { transform: translate(0, 0) scale(1.1); } to { transform: translate(-14vw, 10vw) scale(0.95); } }
-@keyframes drift3 { from { transform: translate(0, 0) scale(1); } to { transform: translate(-10vw, -12vw) scale(1.2); } }
 @media (prefers-reduced-motion: reduce) { .aurora span { animation: none; } }
 
 h1, .font-serif { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.01em; }

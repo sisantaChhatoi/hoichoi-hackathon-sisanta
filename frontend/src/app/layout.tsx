@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
       <body className="min-h-screen font-sans">
-        <div className="aurora" aria-hidden><span className="a1" /><span className="a2" /><span className="a3" /></div>
+        <div className="aurora" aria-hidden><span className="a1" /></div>
         <TooltipProvider>
           <Nav />
           <main className="mx-auto w-full max-w-[1200px] px-6 py-8 lg:px-8">{children}</main>
