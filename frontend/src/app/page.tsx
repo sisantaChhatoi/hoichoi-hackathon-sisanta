@@ -28,7 +28,7 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    const load = () => api.jobs().then(setJobs).catch(() => {});
+    const load = () => api.jobs().then((j) => { setJobs(j); setErr(""); }).catch(() => setErr("Couldn't reach the API — retrying…"));
     load();
     const t = setInterval(load, 5000);
     return () => clearInterval(t);
@@ -111,7 +111,7 @@ export default function Home() {
       <section className="space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold">Episodes</h2>
-          <span className="text-sm text-muted-foreground">{jobs.length ? `${jobs.length} analysed or in progress` : ""}</span>
+          <span className="text-sm text-muted-foreground">{err.startsWith("Couldn") ? err : jobs.length ? `${jobs.length} analysed or in progress` : ""}</span>
         </div>
         <EpisodeList jobs={jobs} limit={8} onRemoved={(id) => setJobs((s) => s.filter((x) => x.id !== id))} />
       </section>

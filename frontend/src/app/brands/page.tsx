@@ -22,7 +22,12 @@ export default function Brands() {
   const [msg, setMsg] = useState("");
   const [view, setView] = useState<Brand | null>(null);
   const [pending, setPending] = useState<Brand | null>(null);
-  useEffect(() => { api.brands().then((c) => setBrands(c.brands)); api.vocab().then((v) => setTags(v.tags)); }, []);
+  useEffect(() => {
+    api.brands().then((c) => setBrands(c.brands)).catch(() => setMsg("Couldn't reach the API — retrying…"));
+    api.vocab().then((v) => setTags(v.tags)).catch(() => {});
+    const t = setInterval(() => api.brands().then((c) => { setBrands(c.brands); setMsg((m) => (m.startsWith("Couldn't") ? "" : m)); }).catch(() => {}), 5000);
+    return () => clearInterval(t);
+  }, []);
 
   const toggle = (k: "target_contexts" | "negative_contexts", t: string) =>
     setB({ ...b, [k]: b[k].includes(t) ? b[k].filter((x) => x !== t) : [...b[k], t] });
