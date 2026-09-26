@@ -60,9 +60,15 @@ def place(job_id: str, analysis: dict, catalogue: dict, pacing: dict, creative_b
     exclusions: dict[str, dict] = {}     # break id → {brand_id: reason}
     judge_log: list[dict] = []
     placed, rejected = [], []
+    def tick(pct, msg):
+        if video_path:  # only during a real run, not an interactive re-place
+            store.set_progress(job_id, "placement", pct, msg)
+
     for round_no in range(3):
+        tick(86 + round_no * 4, "Scoring breaks" if round_no == 0 else "Re-placing after review")
         selected, rejected = scoring.select_breaks(cands, duration, pacing, vetoed)
         log(f"scoring: {len(cands)} candidates → {len(selected)} breaks" + (f" (round {round_no+1})" if round_no else ""))
+        tick(87 + round_no * 4, "Matching brands")
         placed = matching.match(selected, scenes_by_id, catalogue, log=log, use_llm=use_llm, exclusions=exclusions)
         changed = False
         # A slot where no catalogue brand fits is not a good ad slot: try the next candidate instead.
@@ -76,6 +82,7 @@ def place(job_id: str, analysis: dict, catalogue: dict, pacing: dict, creative_b
             if not changed:
                 break
             continue
+        tick(89 + round_no * 4, "Independent review of each break")
         try:
             verdicts = judge.judge(video_path, placed, scenes_by_id, log=log)
         except Exception as e:
@@ -144,17 +151,16 @@ def run_job(job_id: str, video_path: str, pacing: dict | None = None, owner_id: 
 def review_reason(p: dict) -> str | None:
     """Why a break needs a human look, in the user's words; None when confident."""
     doubts = []
+    j = p.get("judge") or {}
+    safety = p["cut_safety"]
     if p["match_method"] == "fallback":
         doubts.append("no brand in your catalogue fits these scenes, so the house promo was used")
-    elif p["match_method"] == "tag_affinity":
+    elif p["match_method"] == "tag_affinity" and j.get("brand_verdict") not in ("fit",):
         doubts.append("the brand was chosen by context overlap only")
-    if p["cut_safety"] < 0.65:
-        doubts.append(f"the cut is only moderately clean (safety {p['cut_safety']:.2f})")
-    j = p.get("judge") or {}
-    if j.get("cut_verdict") == "acceptable":
-        doubts.append("the reviewer found the cut acceptable rather than natural")
-    if j.get("brand_verdict") == "neutral":
-        doubts.append("the reviewer found the brand a neutral fit, not a strong one")
+    if safety < 0.6:
+        doubts.append(f"the cut is only moderately clean (safety {safety:.2f})")
+    elif safety < 0.7 and j.get("cut_verdict") == "acceptable":
+        doubts.append(f"both the score ({safety:.2f}) and the reviewer rate this cut as merely acceptable")
     if j.get("brand_verdict") in ("mismatch", "violation"):
         doubts.append(f"the reviewer flagged the brand as a {j['brand_verdict']}")
     return "; ".join(doubts) or None
