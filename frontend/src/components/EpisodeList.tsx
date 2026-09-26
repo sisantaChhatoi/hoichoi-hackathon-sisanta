@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Trash2 } from "lucide-react";
+import { ArrowRight, Loader2, Trash2 } from "lucide-react";
 import { api, Job, fmt } from "@/lib/api";
 import { etaLabel, stageLabel } from "@/lib/copy";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,9 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 const when = (ts: number) =>
   new Date(ts * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
-export function EpisodeList({ jobs, limit, onRemoved }: { jobs: Job[]; limit?: number; onRemoved: (id: string) => void }) {
+export function EpisodeList({ jobs, limit, onRemoved }: { jobs: Job[] | null; limit?: number; onRemoved: (id: string) => void }) {
   const [pending, setPending] = useState<Job | null>(null);
+  if (jobs === null) return <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Loading episodes…</p>;
   const shown = limit ? jobs.slice(0, limit) : jobs;
   if (jobs.length === 0) return <p className="text-sm text-muted-foreground">No episodes yet. Analyse one to see it here.</p>;
   return (

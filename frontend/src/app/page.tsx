@@ -17,7 +17,7 @@ const POINTS = [
 ];
 
 export default function Home() {
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<Job[] | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
@@ -111,9 +111,9 @@ export default function Home() {
       <section className="rise rise-5 space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold">Episodes</h2>
-          <span className="text-sm text-muted-foreground">{err.startsWith("Couldn") ? err : jobs.length ? `${jobs.length} analysed or in progress` : ""}</span>
+          <span className="text-sm text-muted-foreground">{err.startsWith("Couldn") ? err : jobs?.length ? `${jobs.length} analysed or in progress` : ""}</span>
         </div>
-        <EpisodeList jobs={jobs} limit={8} onRemoved={(id) => setJobs((s) => s.filter((x) => x.id !== id))} />
+        <EpisodeList jobs={jobs} limit={8} onRemoved={(id) => setJobs((s) => (s ?? []).filter((x) => x.id !== id))} />
       </section>
     </div>
   );

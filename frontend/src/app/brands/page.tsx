@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { api, Brand } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,7 +14,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 const empty: Brand = { id: "", name: "", category: "", tagline: "", target_contexts: [], negative_contexts: [], negative_description: "", creative: { bg: "#334155", fg: "#f8fafc" } };
 
 export default function Brands() {
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [brands, setBrands] = useState<Brand[] | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [b, setB] = useState<Brand>(empty);
@@ -68,7 +68,10 @@ export default function Brands() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {brands.map((x) => (
+            {brands === null && (
+              <TableRow><TableCell colSpan={5} className="py-6 pl-6 text-sm text-muted-foreground"><span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Loading brands…</span></TableCell></TableRow>
+            )}
+            {(brands ?? []).map((x) => (
               <TableRow key={x.id} className="cursor-pointer hover:bg-accent/40" onClick={() => setView(x)}>
                 <TableCell className="py-3.5 pl-6 align-top">
                   <div className="flex items-start gap-3">
