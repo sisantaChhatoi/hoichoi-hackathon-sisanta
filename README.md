@@ -1,11 +1,11 @@
-# AdBreak AI — Context-Aware Video Segmentation & Intelligent Ad Placement
+# Cuepoint — context-aware ad-break placement for long-form video
 
-Submission for **hoichoi Hackathon '26 — Problem 1**. Ingests a long-form Bengali drama episode, segments it into
+Ingests a long-form Bengali drama episode, segments it into
 semantically coherent scenes, scores every possible break point for *where* / *whether*, matches each surviving break
 to the most contextually appropriate brand from a synthetic catalogue (*what*), and emits a **VMAP 1.0 manifest**,
 a **debug JSON**, and a **playable demo** that cuts to the ad and resumes.
 
-- Live demo: https://hoichoi-hackathon-sisanta.vercel.app · API: https://hoichoi-hackathon-sisanta.onrender.com · Video walkthrough: _TBD_
+- Live demo: https://hoichoi-hackathon-sisanta.vercel.app · API: https://hoichoi-hackathon-sisanta.onrender.com
 
 ## How it works
 
