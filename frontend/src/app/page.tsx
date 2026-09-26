@@ -7,6 +7,8 @@ import { uploadToBlob, blobUploadsEnabled } from "@/lib/blob";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DEFAULT_PACING, PacingControls } from "@/components/PacingControls";
 import { EpisodeList } from "@/components/EpisodeList";
 import { cn } from "cn";
 
@@ -24,9 +26,12 @@ export default function Home() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [drag, setDrag] = useState(false);
+  const [rules, setRules] = useState<Record<string, number>>(DEFAULT_PACING);
+  const [confirming, setConfirming] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  useEffect(() => { api.pacingDefaults().then(setRules).catch(() => {}); }, []);
   useEffect(() => {
     const load = () => api.jobs().then((j) => { setJobs(j); setErr(""); }).catch(() => setErr("Couldn't reach the API — retrying…"));
     load();
@@ -34,8 +39,13 @@ export default function Home() {
     return () => clearInterval(t);
   }, []);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault(); setErr("");
+  function openRules(e: React.FormEvent) {
+    e.preventDefault();
+    if (file || url) setConfirming(true);
+  }
+
+  async function submit() {
+    setConfirming(false); setErr("");
     try {
       let job: Job;
       const name = title || (file ? file.name.replace(/\.\w+$/, "") : "");
@@ -43,14 +53,14 @@ export default function Home() {
         if (await blobUploadsEnabled()) {
           setBusy("Uploading…");
           const publicUrl = await uploadToBlob(file, (p) => setBusy(`Uploading ${p}%`));
-          job = await api.createFromUrl(publicUrl, name);
+          job = await api.createFromUrl(publicUrl, name, rules);
         } else {
           setBusy("Uploading…");
-          job = await api.upload(file, name);
+          job = await api.upload(file, name, rules);
         }
       } else if (url) {
         setBusy("Starting…");
-        job = await api.createFromUrl(url, name);
+        job = await api.createFromUrl(url, name, rules);
       } else return;
       router.push(`/jobs/${job.id}`);
     } catch (e) { setErr(String(e)); } finally { setBusy(null); }
@@ -77,7 +87,7 @@ export default function Home() {
           </ul>
         </div>
 
-        <form onSubmit={submit} className="rise rise-4 space-y-5">
+        <form onSubmit={openRules} className="rise rise-4 space-y-5">
           <div
             onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
             onDragLeave={() => setDrag(false)}
@@ -107,6 +117,20 @@ export default function Home() {
           {err && <p className="text-sm text-destructive">{err}</p>}
         </form>
       </section>
+
+      <Dialog open={confirming} onOpenChange={setConfirming}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pacing rules for this episode</DialogTitle>
+            <DialogDescription>How many breaks it may carry and where they may not go. You can change these afterwards and re-place in seconds.</DialogDescription>
+          </DialogHeader>
+          <PacingControls value={rules} onChange={setRules} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirming(false)}>Cancel</Button>
+            <Button onClick={submit}>Start analysis <ArrowRight data-icon="inline-end" /></Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <section className="rise rise-5 space-y-4">
         <div className="flex items-baseline justify-between">
