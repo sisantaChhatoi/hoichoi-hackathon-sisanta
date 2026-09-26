@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
+/* Orientation variants used by the base-ui components (slider, separator, progress). */
+@custom-variant data-horizontal (&[data-orientation="horizontal"]);
+@custom-variant data-vertical (&[data-orientation="vertical"]);
 
 /* Design tokens — light, calm, low-contrast borders, soft depth. */
 :root {
@@ -90,7 +93,11 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    background-image: radial-gradient(1200px 400px at 50% -120px, oklch(0.94 0.02 262 / 0.6), transparent 70%);
+    background-image:
+      radial-gradient(900px 500px at 8% -10%, oklch(0.93 0.03 250 / 0.7), transparent 65%),
+      radial-gradient(800px 500px at 95% 5%, oklch(0.95 0.03 60 / 0.55), transparent 65%),
+      radial-gradient(700px 600px at 50% 110%, oklch(0.94 0.025 300 / 0.45), transparent 65%);
+    background-attachment: fixed;
     background-repeat: no-repeat;
   }
   /* Quiet, neutral focus — never a coloured glow. */
@@ -113,6 +120,6 @@
 }
 
 @utility surface {
-  @apply rounded-lg border bg-card;
+  @apply rounded-lg border border-border/70 bg-card/65 backdrop-blur-md;
   box-shadow: var(--shadow-soft);
 }

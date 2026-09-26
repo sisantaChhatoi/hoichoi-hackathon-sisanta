@@ -13,7 +13,7 @@ export function Nav() {
   const path = usePathname();
   return (
     <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-8 px-6 lg:px-10">
+      <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-8 px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground">
             <Clapperboard className="size-4" />

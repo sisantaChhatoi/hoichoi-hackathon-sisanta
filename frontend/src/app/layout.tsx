@@ -18,8 +18,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen font-sans">
         <TooltipProvider>
           <Nav />
-          <main className="mx-auto w-full max-w-[1440px] px-6 py-8 lg:px-10">{children}</main>
-          <footer className="mx-auto max-w-[1440px] px-6 pb-8 text-xs text-muted-foreground lg:px-10">
+          <main className="mx-auto w-full max-w-[1200px] px-6 py-8 lg:px-8">{children}</main>
+          <footer className="mx-auto max-w-[1200px] px-6 pb-8 text-xs text-muted-foreground lg:px-8">
             All brands in the catalogue are fictional.
           </footer>
         </TooltipProvider>
