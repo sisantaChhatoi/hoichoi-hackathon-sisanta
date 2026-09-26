@@ -41,7 +41,7 @@ export default function Player({ src, breaks, adSeconds, duration, seekTo }:
   const c = ad?.brand.creative ?? {};
   const adSrc = ad ? (c.video_url ?? `/creatives/${ad.brand.id}.mp4`) : "";
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
+    <div className="overflow-hidden surface">
       <div className="relative aspect-video bg-black">
         <video ref={video} src={src} controls className="h-full w-full" onTimeUpdate={onTime} />
         {ad && (

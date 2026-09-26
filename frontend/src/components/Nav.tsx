@@ -25,7 +25,7 @@ export function Nav() {
             const active = l.href === "/" ? path === "/" || path.startsWith("/jobs") : path.startsWith(l.href);
             return (
               <Link key={l.href} href={l.href}
-                className={cn("rounded-md px-3 py-1.5 transition-colors hover:bg-accent hover:text-accent-foreground",
+                className={cn("rounded-full px-3 py-1.5 transition-colors hover:bg-accent hover:text-accent-foreground",
                   active ? "bg-accent text-accent-foreground" : "text-muted-foreground")}>
                 {l.label}
               </Link>

@@ -2,9 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { api, Brand } from "@/lib/api";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,56 +49,54 @@ export default function Brands() {
 
       {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
 
-      <Card>
-        <CardContent className="px-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="pl-6">Brand</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Target contexts</TableHead>
-                <TableHead>Hard blocks</TableHead>
-                <TableHead className="w-12 pr-6" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {brands.map((x) => (
-                <TableRow key={x.id}>
-                  <TableCell className="pl-6 align-top">
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5 size-4 shrink-0 rounded-sm border" style={{ background: x.creative?.bg }} />
-                      <div>
-                        <div className="font-medium">{x.name}</div>
-                        <div className="text-xs text-muted-foreground">{x.tagline}</div>
-                      </div>
+      <div className="surface overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className="h-auto py-3 pl-6 text-xs font-medium text-muted-foreground uppercase tracking-wide">Brand</TableHead>
+              <TableHead className="h-auto py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</TableHead>
+              <TableHead className="h-auto py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Target contexts</TableHead>
+              <TableHead className="h-auto py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Hard blocks</TableHead>
+              <TableHead className="h-auto w-12 py-3 pr-6" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {brands.map((x) => (
+              <TableRow key={x.id} className="hover:bg-accent/40">
+                <TableCell className="py-3.5 pl-6 align-top">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 size-4 shrink-0 rounded-sm border border-border" style={{ background: x.creative?.bg }} />
+                    <div>
+                      <div className="font-medium">{x.name}</div>
+                      <div className="text-xs text-muted-foreground">{x.tagline}</div>
                     </div>
-                  </TableCell>
-                  <TableCell className="align-top text-muted-foreground">{x.category}</TableCell>
-                  <TableCell className="align-top"><TagList tags={x.target_contexts} /></TableCell>
-                  <TableCell className="align-top"><TagList tags={x.negative_contexts} tone="destructive" /></TableCell>
-                  <TableCell className="pr-6 text-right align-top">
-                    <Button variant="ghost" size="icon" aria-label="Remove" onClick={() => api.deleteBrand(x.id).then((c) => setBrands(c.brands))}><Trash2 /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  </div>
+                </TableCell>
+                <TableCell className="py-3.5 align-top text-muted-foreground">{x.category}</TableCell>
+                <TableCell className="py-3.5 align-top"><TagList tags={x.target_contexts} /></TableCell>
+                <TableCell className="py-3.5 align-top"><TagList tags={x.negative_contexts} tone="destructive" /></TableCell>
+                <TableCell className="py-3.5 pr-6 text-right align-top">
+                  <Button variant="ghost" size="icon" aria-label="Remove" onClick={() => api.deleteBrand(x.id).then((c) => setBrands(c.brands))}><Trash2 /></Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border border-border bg-card shadow-[var(--shadow-float)] ring-0 sm:max-w-2xl">
           <form onSubmit={save} className="space-y-5">
             <DialogHeader>
               <DialogTitle>Add a brand</DialogTitle>
               <DialogDescription>Brands are fictional and use the same context vocabulary as the scene analysis.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Name" id="name"><Input id="name" value={b.name} onChange={(e) => setB({ ...b, name: e.target.value })} required /></Field>
-              <Field label="Category" id="cat"><Input id="cat" value={b.category} onChange={(e) => setB({ ...b, category: e.target.value })} /></Field>
-              <Field label="Tagline" id="tag" className="sm:col-span-2"><Input id="tag" value={b.tagline} onChange={(e) => setB({ ...b, tagline: e.target.value })} /></Field>
+              <Field label="Name" id="name"><Input id="name" placeholder="Brand name" value={b.name} onChange={(e) => setB({ ...b, name: e.target.value })} required /></Field>
+              <Field label="Category" id="cat"><Input id="cat" placeholder="e.g. Tea, Two-wheelers" value={b.category} onChange={(e) => setB({ ...b, category: e.target.value })} /></Field>
+              <Field label="Tagline" id="tag" className="sm:col-span-2"><Input id="tag" placeholder="Short tagline" value={b.tagline} onChange={(e) => setB({ ...b, tagline: e.target.value })} /></Field>
             </div>
-            <TagPicker label="Target contexts" hint="scenes this brand wants to follow" tags={tags} selected={b.target_contexts} onToggle={(t) => toggle("target_contexts", t)} tone="success" />
+            <TagPicker label="Target contexts" hint="scenes this brand wants to follow" tags={tags} selected={b.target_contexts} onToggle={(t) => toggle("target_contexts", t)} tone="primary" />
             <TagPicker label="Hard blocks" hint="never placed next to these" tags={tags} selected={b.negative_contexts} onToggle={(t) => toggle("negative_contexts", t)} tone="destructive" />
             <Field label="Additional rule" id="rule" hint="Free text, enforced by the matcher">
               <Textarea id="rule" placeholder="e.g. never after a scene where food is wasted" value={b.negative_description} onChange={(e) => setB({ ...b, negative_description: e.target.value })} />
@@ -125,7 +121,7 @@ export default function Brands() {
 
 function Field({ label, id, hint, className, children }: { label: string; id: string; hint?: string; className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("space-y-1", className)}>
       <Label htmlFor={id}>{label}</Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -134,16 +130,18 @@ function Field({ label, id, hint, className, children }: { label: string; id: st
 }
 
 function TagList({ tags, tone }: { tags: string[]; tone?: "destructive" }) {
-  const shown = tags.slice(0, 5);
+  if (!tags.length) return <span className="text-sm text-muted-foreground/60">—</span>;
+  const shown = tags.slice(0, 4);
+  const rest = tags.slice(4);
   return (
-    <div className="flex flex-wrap gap-1">
-      {shown.map((t) => <Badge key={t} variant="outline" className={cn("font-normal", tone === "destructive" && "border-destructive/40 text-destructive")}>{t}</Badge>)}
-      {tags.length > shown.length && <Badge variant="outline" className="font-normal text-muted-foreground" title={tags.slice(5).join(", ")}>+{tags.length - shown.length}</Badge>}
-    </div>
+    <span className={cn("text-sm text-muted-foreground", tone === "destructive" && "text-destructive/80")}>
+      {shown.join(", ")}
+      {rest.length > 0 && <span title={rest.join(", ")}>, +{rest.length} more</span>}
+    </span>
   );
 }
 
-function TagPicker({ label, hint, tags, selected, onToggle, tone }: { label: string; hint: string; tags: string[]; selected: string[]; onToggle: (t: string) => void; tone: "success" | "destructive" }) {
+function TagPicker({ label, hint, tags, selected, onToggle, tone }: { label: string; hint: string; tags: string[]; selected: string[]; onToggle: (t: string) => void; tone: "primary" | "destructive" }) {
   const [q, setQ] = useState("");
   const visible = useMemo(() => tags.filter((t) => t.includes(q.toLowerCase())), [tags, q]);
   return (
@@ -152,14 +150,18 @@ function TagPicker({ label, hint, tags, selected, onToggle, tone }: { label: str
         <Label>{label} <span className="font-normal text-muted-foreground">— {hint}</span></Label>
         <span className="text-xs text-muted-foreground">{selected.length} selected</span>
       </div>
-      <Input placeholder="Filter contexts…" value={q} onChange={(e) => setQ(e.target.value)} className="h-8" />
-      <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto rounded-md border p-2">
+      <Input placeholder="Filter contexts" value={q} onChange={(e) => setQ(e.target.value)} className="h-8" />
+      <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto rounded-md border border-border p-2">
         {visible.map((t) => {
           const on = selected.includes(t);
           return (
             <button type="button" key={t} onClick={() => onToggle(t)}
               className={cn("rounded-md border px-2 py-0.5 text-xs transition-colors",
-                on ? (tone === "success" ? "border-success/60 bg-success/10 text-success" : "border-destructive/60 bg-destructive/10 text-destructive") : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground")}>
+                on
+                  ? tone === "primary"
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-destructive/30 bg-destructive/10 text-destructive"
+                  : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground")}>
               {t}
             </button>
           );

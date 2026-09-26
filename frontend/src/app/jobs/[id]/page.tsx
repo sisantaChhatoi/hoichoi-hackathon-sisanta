@@ -6,9 +6,7 @@ import { API, api, Job, Scene, fmt, mediaUrl } from "@/lib/api";
 import { STAGES, blockLabel, matchLabel, sourceLabel, stageLabel } from "@/lib/copy";
 import Player from "@/components/Player";
 import Timeline from "@/components/Timeline";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -23,6 +21,8 @@ const PACING: { key: string; label: string; min: number; max: number; step: numb
   { key: "ad_duration_seconds", label: "Ad length", min: 10, max: 60, step: 5, unit: "s" },
   { key: "min_cut_safety", label: "Minimum cut safety", min: 0.3, max: 0.9, step: 0.05 },
 ];
+
+const label = "text-xs font-medium tracking-wide text-muted-foreground uppercase";
 
 export default function JobPage() {
   const { id } = useParams<{ id: string }>();
@@ -69,57 +69,61 @@ export default function JobPage() {
       </div>
 
       {job.status !== "done" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{job.status === "error" ? "Analysis failed" : "Analysing"}</CardTitle>
-            <CardDescription>{job.status === "error" ? job.message : job.message || stageLabel[job.stage ?? "queued"]}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {job.status !== "error" && <Progress value={job.progress ?? 0} />}
-            <ol className="grid gap-2 sm:grid-cols-5">
-              {STAGES.map((s, i) => {
-                const state = job.status === "error" ? "idle" : i < stageIdx ? "done" : i === stageIdx ? "active" : "idle";
-                return (
-                  <li key={s} className={cn("flex items-center gap-2 text-sm", state === "idle" && "text-muted-foreground")}>
-                    <span className={cn("grid size-5 place-items-center rounded-full border text-[10px]",
-                      state === "done" && "border-success bg-success text-background", state === "active" && "border-primary text-primary")}>
-                      {state === "done" ? <Check className="size-3" /> : i + 1}
-                    </span>
-                    {stageLabel[s]}
-                  </li>
-                );
-              })}
-            </ol>
-            {job.status === "error" && (
-              <Button size="sm" onClick={() => api.retry(id).then(setJob).catch((e) => setErr(String(e)))}><RefreshCw data-icon="inline-start" /> Retry</Button>
-            )}
-          </CardContent>
-        </Card>
+        <div className="surface space-y-4 p-6">
+          <div className="space-y-1">
+            <h2 className="text-base font-medium">{job.status === "error" ? "Analysis failed" : "Analysing"}</h2>
+            <p className="text-sm text-muted-foreground">{job.status === "error" ? job.message : job.message || stageLabel[job.stage ?? "queued"]}</p>
+          </div>
+          {job.status !== "error" && <Progress value={job.progress ?? 0} />}
+          <ol className="grid gap-2 sm:grid-cols-5">
+            {STAGES.map((s, i) => {
+              const state = job.status === "error" ? "idle" : i < stageIdx ? "done" : i === stageIdx ? "active" : "idle";
+              return (
+                <li key={s} className={cn("flex items-center gap-2 text-sm", state === "idle" && "text-muted-foreground")}>
+                  <span className={cn("grid size-5 place-items-center rounded-full border text-[10px]",
+                    state === "done" && "border-success bg-success text-background", state === "active" && "border-primary text-primary")}>
+                    {state === "done" ? <Check className="size-3" /> : i + 1}
+                  </span>
+                  {stageLabel[s]}
+                </li>
+              );
+            })}
+          </ol>
+          {job.status === "error" && (
+            <Button size="sm" onClick={() => api.retry(id).then(setJob).catch((e) => setErr(String(e)))}><RefreshCw data-icon="inline-start" /> Retry</Button>
+          )}
+        </div>
       )}
 
       {a && r && (
         <>
           {job.video_url && <Player src={mediaUrl(job.video_url)} breaks={r.breaks} adSeconds={r.pacing.ad_duration_seconds} duration={a.media.duration} seekTo={seekTo} />}
-          <Timeline scenes={a.scenes} breaks={r.breaks} candidates={r.candidates} duration={a.media.duration} onSeek={setSeekTo} />
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ad breaks</CardTitle>
-                <CardDescription>{r.breaks.length} placed · each one explains where, whether and what</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
+            <div className="surface space-y-5 p-6">
+              <div className="space-y-2">
+                <p className={label}>Scene timeline</p>
+                <Timeline scenes={a.scenes} breaks={r.breaks} candidates={r.candidates} duration={a.media.duration} onSeek={setSeekTo} />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-5">
+                <div className="flex items-baseline justify-between">
+                  <p className={label}>Ad breaks</p>
+                  <span className="text-xs text-muted-foreground">{r.breaks.length} placed</span>
+                </div>
                 {r.breaks.length === 0 && <p className="text-sm text-muted-foreground">No break met the rules for this episode.</p>}
                 {r.breaks.map((b, i) => {
                   const blocked = b.brand_rows.filter((x) => x.blocked_by.length);
                   return (
                     <div key={b.id} className="space-y-2">
-                      {i > 0 && <Separator className="mb-4" />}
-                      <div className="flex flex-wrap items-center gap-2">
+                      {i > 0 && <Separator className="mb-3" />}
+                      <div className="flex flex-wrap items-center gap-3">
                         <button type="button" onClick={() => setSeekTo(b.time - 4)} className="font-mono text-sm font-semibold hover:underline">{fmt(b.time)}</button>
                         <span className="rounded-md px-2 py-0.5 text-sm font-semibold" style={{ background: b.brand.creative?.bg, color: b.brand.creative?.fg }}>{b.brand.name}</span>
-                        <Badge variant="outline">cut safety {b.cut_safety.toFixed(2)}</Badge>
-                        <Badge variant="secondary">{sourceLabel[b.source] ?? b.source}</Badge>
+                        <span className="font-mono text-xs text-muted-foreground">Cut safety {b.cut_safety.toFixed(2)}</span>
+                        <span className="text-xs text-muted-foreground">{sourceLabel[b.source] ?? b.source}</span>
                       </div>
                       <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         {scenesById[b.scene_before]?.title} <ArrowRight className="size-3.5" /> {scenesById[b.scene_after]?.title}
@@ -130,11 +134,11 @@ export default function JobPage() {
                         <dt className="text-muted-foreground">Selection</dt><dd>{matchLabel[b.match_method] ?? b.match_method}</dd>
                         {blocked.length > 0 && (<>
                           <dt className="text-muted-foreground">Blocked here</dt>
-                          <dd className="flex flex-wrap gap-1">{blocked.map((x) => <Badge key={x.brand_id} variant="outline" className="border-destructive/40 text-destructive">{x.brand_id} · {x.blocked_by.map(blockLabel).join(", ")}</Badge>)}</dd>
+                          <dd>{blocked.map((x) => `${x.brand_id} (${x.blocked_by.map(blockLabel).join(", ")})`).join(", ")}</dd>
                         </>)}
                         {b.judge && (<>
                           <dt className="text-muted-foreground">Independent review</dt>
-                          <dd className="flex flex-wrap items-center gap-1">
+                          <dd className="flex flex-wrap items-center gap-1.5">
                             <ShieldCheck className="size-3.5 text-success" />
                             <span>cut {b.judge.cut_verdict}, brand {b.judge.brand_verdict}</span>
                             <span className="text-muted-foreground">— {b.judge.notes}</span>
@@ -144,46 +148,48 @@ export default function JobPage() {
                     </div>
                   );
                 })}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pacing rules</CardTitle>
-                  <CardDescription>Decide whether a break is warranted. Re-placing reuses the analysis and takes seconds.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  {PACING.map((f) => (
-                    <div key={f.key} className="space-y-2">
-                      <div className="flex justify-between text-sm"><Label>{f.label}</Label><span className="font-mono text-muted-foreground">{p[f.key]}{f.unit ?? ""}</span></div>
-                      <Slider min={f.min} max={f.max} step={f.step} value={[p[f.key] ?? f.min]}
-                        onValueChange={(v) => setPacing({ ...pacing, [f.key]: Array.isArray(v) ? v[0] : v })} />
+            <div className="surface space-y-5 p-6">
+              <div className="space-y-1">
+                <p className={label}>Pacing rules</p>
+                <p className="text-sm text-muted-foreground">Decide whether a break is warranted. Re-placing reuses the analysis and takes seconds.</p>
+              </div>
+              <div className="space-y-4">
+                {PACING.map((f) => (
+                  <div key={f.key} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label>{f.label}</Label>
+                      <span className="font-mono text-sm text-muted-foreground">{p[f.key]}{f.unit ?? ""}</span>
                     </div>
-                  ))}
-                  <Button className="w-full" onClick={replace} disabled={busy}><RefreshCw data-icon="inline-start" className={busy ? "animate-spin" : ""} /> {busy ? "Re-placing…" : "Re-run placement"}</Button>
-                </CardContent>
-              </Card>
+                    <Slider min={f.min} max={f.max} step={f.step} value={[p[f.key] ?? f.min]}
+                      onValueChange={(v) => setPacing({ ...pacing, [f.key]: Array.isArray(v) ? v[0] : v })} />
+                  </div>
+                ))}
+              </div>
+              <Button className="w-full" onClick={replace} disabled={busy}><RefreshCw data-icon="inline-start" className={busy ? "animate-spin" : ""} /> {busy ? "Re-placing…" : "Re-run placement"}</Button>
+
+              <Separator />
 
               <Collapsible>
-                <Card>
-                  <CollapsibleTrigger className="w-full text-left">
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">Other cuts considered <ChevronDown className="size-4 text-muted-foreground" /></CardTitle>
-                      <CardDescription>{r.rejected.length} candidates and the rule that ruled each one out</CardDescription>
-                    </CardHeader>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <CardContent className="max-h-80 space-y-2 overflow-auto text-sm">
-                      {[...r.rejected].sort((x, y) => x.time - y.time).map((c) => (
-                        <div key={c.id} className="flex gap-3">
-                          <button type="button" className="font-mono text-xs hover:underline" onClick={() => setSeekTo(c.time - 3)}>{fmt(c.time)}</button>
-                          <span className="text-muted-foreground">{c.rejected_because}</span>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </CollapsibleContent>
-                </Card>
+                <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 text-left">
+                  <div className="space-y-1">
+                    <p className={label}>Other cuts considered</p>
+                    <p className="text-sm text-muted-foreground">{r.rejected.length} candidates and the rule that ruled each one out</p>
+                  </div>
+                  <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-3 max-h-80 space-y-2 overflow-auto text-sm">
+                    {[...r.rejected].sort((x, y) => x.time - y.time).map((c) => (
+                      <div key={c.id} className="flex gap-3">
+                        <button type="button" className="font-mono text-xs hover:underline" onClick={() => setSeekTo(c.time - 3)}>{fmt(c.time)}</button>
+                        <span className="text-muted-foreground">{c.rejected_because}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
               </Collapsible>
             </div>
           </div>
