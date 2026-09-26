@@ -57,7 +57,7 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-14">
+    <div className="-mt-4 space-y-14">
       <section className="grid items-center gap-12 py-2 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-16 lg:pr-16">
         <div className="space-y-8">
           <div className="space-y-4">
