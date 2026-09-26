@@ -48,8 +48,7 @@ export default function Brands() {
         <div className="space-y-1">
           <h1 className="text-4xl">Brand catalogue</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Target contexts attract a brand to a scene. Hard blocks are absolute: a brand is never placed next to a scene carrying any of them.
-            New brands are matched without code changes.
+            Each brand says which moments suit it and which it must stay away from. Add one here and it is considered the next time you place breaks.
           </p>
         </div>
         <Button onClick={() => setOpen(true)}><Plus data-icon="inline-start" /> Add brand</Button>
@@ -101,16 +100,16 @@ export default function Brands() {
           <form onSubmit={save} className="space-y-5">
             <DialogHeader>
               <DialogTitle>Add a brand</DialogTitle>
-              <DialogDescription>Brands are fictional and use the same context vocabulary as the scene analysis.</DialogDescription>
+              <DialogDescription>Choose the moments that suit this brand and the ones it must avoid.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Name" id="name"><Input id="name" placeholder="Brand name" value={b.name} onChange={(e) => setB({ ...b, name: e.target.value })} required /></Field>
               <Field label="Category" id="cat"><Input id="cat" placeholder="e.g. Tea, Two-wheelers" value={b.category} onChange={(e) => setB({ ...b, category: e.target.value })} /></Field>
               <Field label="Tagline" id="tag" className="sm:col-span-2"><Input id="tag" placeholder="Short tagline" value={b.tagline} onChange={(e) => setB({ ...b, tagline: e.target.value })} /></Field>
             </div>
-            <TagPicker label="Target contexts" hint="scenes this brand wants to follow" tags={tags} selected={b.target_contexts} onToggle={(t) => toggle("target_contexts", t)} tone="primary" />
-            <TagPicker label="Hard blocks" hint="never placed next to these" tags={tags} selected={b.negative_contexts} onToggle={(t) => toggle("negative_contexts", t)} tone="destructive" />
-            <Field label="Additional rule" id="rule" hint="Free text, enforced by the matcher">
+            <TagPicker label="Target contexts" hint="moments that suit this brand" tags={tags} selected={b.target_contexts} onToggle={(t) => toggle("target_contexts", t)} tone="primary" />
+            <TagPicker label="Hard blocks" hint="moments it must avoid" tags={tags} selected={b.negative_contexts} onToggle={(t) => toggle("negative_contexts", t)} tone="destructive" />
+            <Field label="Additional rule" id="rule" hint="Anything else the brand should never appear next to">
               <Textarea id="rule" placeholder="e.g. never after a scene where food is wasted" value={b.negative_description} onChange={(e) => setB({ ...b, negative_description: e.target.value })} />
             </Field>
             <div className="flex items-center gap-4">
