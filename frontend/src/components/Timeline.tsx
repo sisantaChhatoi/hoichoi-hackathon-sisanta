@@ -21,7 +21,7 @@ export default function Timeline({ scenes, breaks, candidates, duration, onSeek 
           <div key={c.id} className="absolute bottom-0 h-2 w-px bg-foreground/25" style={{ left: pct(c.time) }} />
         ))}
         {breaks.map((b) => (
-          <div key={b.id} className="absolute top-0 h-full w-1 bg-foreground" style={{ left: pct(b.time) }} title={`${fmt(b.time)} · ${b.brand.name}`} />
+          <div key={b.id} className={b.status === "review" ? "absolute top-0 h-full w-1 bg-warning" : "absolute top-0 h-full w-1 bg-foreground"} style={{ left: pct(b.time) }} title={`${fmt(b.time)} · ${b.brand.name}${b.status === "review" ? " · needs review" : ""}`} />
         ))}
       </div>
       <div className="min-h-16 text-sm">
@@ -40,7 +40,7 @@ export default function Timeline({ scenes, breaks, candidates, duration, onSeek 
             <div className="flex flex-wrap gap-1">{hover.tags.map((t) => <Badge key={t} variant="outline">{t}</Badge>)}</div>
           </div>
         ) : (
-          <p className="text-muted-foreground">Hover a scene for its summary and context tags. Colour is mood; dark bars are placed breaks, faint ticks are every cut that was considered.</p>
+          <p className="text-muted-foreground">Hover a scene for its summary and context tags. Colour is mood; dark bars are placed breaks, amber bars need your call, faint ticks are every cut that was considered.</p>
         )}
       </div>
     </div>

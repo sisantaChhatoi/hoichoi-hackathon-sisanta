@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowRight, Check, ChevronDown, Download, FileJson, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, CircleHelp, Download, FileJson, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { api, authedUrl, Job, Scene, fmt, mediaUrl } from "@/lib/api";
 import { STAGES, blockLabel, etaLabel, matchLabel, sourceLabel, stageLabel } from "@/lib/copy";
 import Player from "@/components/Player";
@@ -37,6 +37,10 @@ export default function JobPage() {
     const t = setInterval(() => { if (!job || job.status === "running" || job.status === "queued") load(); }, 3000);
     return () => clearInterval(t);
   }, [load, job?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function decide(breakId: string, action: "approve" | "remove") {
+    try { setJob(await api.decide(id, breakId, action)); } catch (e) { setErr(String(e)); }
+  }
 
   async function replace() {
     setBusy(true);
@@ -100,7 +104,7 @@ export default function JobPage() {
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
           {/* main column */}
           <div className="space-y-8">
-            {job.video_url && <Player src={mediaUrl(job.video_url)} breaks={r.breaks} adSeconds={r.pacing.ad_duration_seconds} duration={a.media.duration} seekTo={seekTo} />}
+            {job.video_url && <Player src={mediaUrl(job.video_url)} breaks={r.breaks.filter((b) => b.status !== "review")} adSeconds={r.pacing.ad_duration_seconds} duration={a.media.duration} seekTo={seekTo} />}
 
             <section className="space-y-3">
               <p className={sectionLabel}>Scenes</p>
@@ -110,7 +114,7 @@ export default function JobPage() {
             <section className="space-y-4">
               <div className="flex items-baseline justify-between">
                 <p className={sectionLabel}>Ad breaks</p>
-                <span className="text-xs text-muted-foreground">{r.breaks.length} placed</span>
+                <span className="text-xs text-muted-foreground">{r.breaks.filter((b) => b.status !== "review").length} placed{r.breaks.some((b) => b.status === "review") ? ` · ${r.breaks.filter((b) => b.status === "review").length} to review` : ""}</span>
               </div>
               {r.breaks.length === 0 && <p className="text-sm text-muted-foreground">No break met the rules for this episode.</p>}
               <div className="divide-y">
@@ -122,8 +126,23 @@ export default function JobPage() {
                         <button type="button" onClick={() => setSeekTo(b.time - 4)} className="font-mono text-lg font-semibold hover:underline">{fmt(b.time)}</button>
                         <p className="text-xs text-muted-foreground">{sourceLabel[b.source] ?? b.source}</p>
                         <p className="font-mono text-xs text-muted-foreground">safety {b.cut_safety.toFixed(2)}</p>
+                        {b.status !== "review" && (
+                          <button type="button" onClick={() => decide(b.id, "remove")} className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive">
+                            <X className="size-3" /> Remove
+                          </button>
+                        )}
                       </div>
                       <div className="space-y-2">
+                        {b.status === "review" && (
+                          <div className="flex flex-wrap items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm">
+                            <CircleHelp className="mt-0.5 size-4 shrink-0 text-warning" />
+                            <span className="flex-1"><span className="font-medium">Needs your call</span> — {b.review_reason}</span>
+                            <span className="flex gap-1.5">
+                              <Button size="xs" onClick={() => decide(b.id, "approve")}><Check data-icon="inline-start" /> Insert</Button>
+                              <Button size="xs" variant="outline" onClick={() => decide(b.id, "remove")}><X data-icon="inline-start" /> Reject</Button>
+                            </span>
+                          </div>
+                        )}
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-md px-2 py-0.5 text-sm font-semibold" style={{ background: b.brand.creative?.bg, color: b.brand.creative?.fg }}>{b.brand.name}</span>
                           <span className="flex items-center gap-1.5 text-sm text-muted-foreground">

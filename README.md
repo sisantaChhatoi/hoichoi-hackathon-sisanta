@@ -56,26 +56,31 @@ flowchart TD
 ```
 
 ### Perception
-The episode is uploaded once to Gemini's Files API and analysed **in full**, in 5-minute chunks at one frame per second with audio — that is how the system knows what each scene is about, its mood, who is speaking and when. In parallel, ffmpeg produces two cheap, precise signals locally: a **silence map** (sub-second) and **shot changes**. Scene analysis is schema-constrained: every scene is tagged only from a controlled vocabulary (`backend/app/vocab.py`), which is what makes brand blocking deterministic later.
+The episode is uploaded **once** to Gemini's Files API and read at a deliberately low rate — one frame per second plus audio, in 5-minute chunks analysed four at a time — so a 25-minute episode costs about 120k tokens and ~25 seconds of model time. This single pass is what tells the system what each scene is about, its mood, who is speaking and when; nothing downstream re-sends video. Results are cached by file hash, so re-placing, re-judging or tuning pacing never touches the model again. In parallel, ffmpeg produces two cheap, precise signals locally: a **silence map** (sub-second) and **shot changes**. Scene analysis is schema-constrained: every scene is tagged only from a controlled vocabulary (`backend/app/vocab.py`), which is what makes brand blocking deterministic later.
+
+Why not just ask the model "where do the ads go"? Because the parts that must be exact are the parts a model is worst at: pacing arithmetic, a negative-context block that must never be talked around, and cut timing to the frame. The model contributes understanding; code makes the decisions, so every one of them can be shown.
 
 ### Where
-Only semantic points become candidates — scene boundaries and pause points Gemini flagged inside long scenes. A quiet moment in the middle of a tense scene never becomes a break because nothing proposes it. Each candidate cut is then snapped to the nearest real pause and scored from explainable components; a cut that lands inside dialogue is never used. All components are in the decision report.
+Only semantic points become candidates — scene boundaries and pause points Gemini flagged inside long scenes. A quiet moment in the middle of a tense scene never becomes a break because nothing proposes it. The model's timestamps are whole seconds (it samples at 1 fps), so each candidate is **snapped** to the nearest real pause from ffmpeg's silence map (~10 ms precision) and scored from explainable components: pause length, the model's own boundary quality, and whether a shot change coincides. A cut that still lands inside dialogue is never used. In practice a fifth of candidates move by up to a few seconds, and several per episode are dropped — those would have been mid-sentence cuts.
 
 ### Whether
 Pacing rules decide how many breaks an episode may carry and where they may not go. Selection is greedy best-first, and every rejected candidate keeps the rule that rejected it ("would cut mid-dialogue", "break budget reached", "less than 5 min from another break", …). Rules are adjustable per episode and re-run in seconds without re-analysing.
 
 ### What
-Brand matching has two gates and a ranker. Gate 1 is a set intersection between the brand's *negative contexts* and the tags of the scenes on either side of the cut — no model can talk its way past it. Gate 2 lets a model enforce the brand's free-text rule. Survivors are ranked by context affinity with the *preceding* scene (dominant activity wins) and a model picks one with a one-sentence rationale. If everything is blocked, a house promo is used rather than a bad ad. Because brands and scenes share one vocabulary, a brand nobody has seen before is matched with zero code changes.
+Brand matching has two gates and a ranker. A slot where **no** brand passes the gates is treated as a bad slot rather than forced: it is vetoed and the next-best candidate is tried; only if nothing works does a house promo appear, and then it is flagged for review. Gate 1 is a set intersection between the brand's *negative contexts* and the tags of the scenes on either side of the cut — no model can talk its way past it. Gate 2 lets a model enforce the brand's free-text rule. Survivors are ranked by context affinity with the *preceding* scene (dominant activity wins) and a model picks one with a one-sentence rationale. If everything is blocked, a house promo is used rather than a bad ad. Because brands and scenes share one vocabulary, a brand nobody has seen before is matched with zero code changes.
 
 ### Review gate
 A second, stronger model independently audits each placement from the keyframes around the cut plus the scene and brand context. It can veto a jarring cut (the next-best candidate takes its place) or reject a brand for that slot (the matcher re-runs without it). Anything still judged jarring after two rounds is dropped — fewer breaks beat a bad one.
+
+### Human in the loop
+Breaks the system is not confident about — a merely acceptable cut, a neutral brand fit, a forced brand, a low safety score — are not inserted silently. They appear in the episode view as **Needs your call** with the specific doubt, and the user inserts or rejects them. Any inserted break can be removed at any time. Only inserted breaks reach the manifest and the player.
 
 ---
 
 ## Product
 
 - **Episodes** — upload (browser → Vercel Blob) or paste a URL; progress with stage, percent and time remaining; toast on completion with a View action.
-- **Episode view** — custom player with break markers on the seek bar, scene strip (colour = mood; hover for summary and tags), each break with its brand, rationale, why-this-cut, blocked brands and the reviewer's verdict; pacing sliders that re-place in seconds; a list of every other cut considered and why it lost.
+- **Episode view** — custom player with break markers on the seek bar, scene strip (colour = mood; hover for summary and tags), each break with its brand, rationale, why-this-cut, blocked brands and the reviewer's verdict; breaks held for review with Insert / Reject, Remove on any break; pacing sliders that re-place in seconds; a list of every other cut considered and why it lost.
 - **Brands** — a fictional catalogue per user, seeded with eight brands; add one in a dialog (contexts to seek, contexts to avoid, a free-text rule, creative colours); click a row to preview its creative.
 - **Outputs** — VMAP manifest and decision report per episode.
 
@@ -138,6 +143,7 @@ All `/jobs` and `/brands` routes require `Authorization: Bearer <token>`.
 | POST | `/jobs` `{url,title}` · `/jobs/upload` (multipart) | analyse an episode |
 | GET | `/jobs` · `/jobs/{id}` | list / detail (scenes, breaks, rejected candidates) |
 | POST | `/jobs/{id}/place` `{pacing}` | re-run scoring + matching only |
+| POST | `/jobs/{id}/breaks/{break_id}` `{action}` | approve a held break or remove one |
 | POST | `/jobs/{id}/retry` · DELETE `/jobs/{id}` | retry / remove |
 | GET | `/jobs/{id}/vmap.xml` · `/jobs/{id}/debug.json` | outputs (accept `?token=`) |
 | GET/POST/DELETE | `/brands` | the caller's catalogue |

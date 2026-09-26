@@ -240,6 +240,26 @@ def replace(job_id: str, body: Replace, user: dict = auth.CurrentUser):
     return job(job_id, user=user)
 
 
+class Decision(BaseModel):
+    action: str  # approve | remove
+
+
+@app.post("/jobs/{job_id}/breaks/{break_id}")
+def decide_break(job_id: str, break_id: str, body: Decision, user: dict = auth.CurrentUser):
+    """Approve a break that was held for review, or remove any break."""
+    j = _load(job_id, user, edit=True)
+    if not j.get("result"):
+        raise HTTPException(404, "no placement yet")
+    try:
+        result = run.apply_decision(j["result"], break_id, body.action, j["result"]["pacing"]["ad_duration_seconds"], job_id, config.CREATIVE_BASE_URL)
+    except KeyError:
+        raise HTTPException(404, "unknown break")
+    except ValueError:
+        raise HTTPException(400, "action must be approve or remove")
+    store.update(job_id, result=result)
+    return job(job_id, user=user)
+
+
 @app.get("/jobs/{job_id}/vmap.xml")
 def vmap_xml(job_id: str, user: dict = auth.CurrentUser):
     j = _load(job_id, user)

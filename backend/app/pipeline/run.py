@@ -60,21 +60,28 @@ def place(job_id: str, analysis: dict, catalogue: dict, pacing: dict, creative_b
     exclusions: dict[str, dict] = {}     # break id → {brand_id: reason}
     judge_log: list[dict] = []
     placed, rejected = [], []
-    for round_no in range(2):
+    for round_no in range(3):
         selected, rejected = scoring.select_breaks(cands, duration, pacing, vetoed)
         log(f"scoring: {len(cands)} candidates → {len(selected)} breaks" + (f" (round {round_no+1})" if round_no else ""))
         placed = matching.match(selected, scenes_by_id, catalogue, log=log, use_llm=use_llm, exclusions=exclusions)
+        changed = False
+        # A slot where no catalogue brand fits is not a good ad slot: try the next candidate instead.
+        for p in placed:
+            if p["match_method"] == "fallback" and round_no < 2:
+                vetoed[p["id"]] = "no catalogue brand fits the surrounding scenes"
+                changed = True
         if not (use_judge and judge.enabled()):
             if round_no == 0:
                 log("judge: skipped")
-            break
+            if not changed:
+                break
+            continue
         try:
             verdicts = judge.judge(video_path, placed, scenes_by_id, log=log)
         except Exception as e:
             log(f"judge: failed, keeping placement as-is: {type(e).__name__}: {e}"[:300])
             break
         by_id = {v.break_id: v for v in verdicts}
-        changed = False
         for p in placed:
             v = by_id.get(p["id"])
             if not v:
@@ -100,8 +107,14 @@ def place(job_id: str, analysis: dict, catalogue: dict, pacing: dict, creative_b
             log(f"judge: dropping break @{p['time']:.1f}s (still jarring after re-placement)")
         placed = [p for p in placed if p not in still_bad]
 
+    # Confidence gate: anything we are not sure about is handed to the user with the specific doubt.
     for p in placed:
-        log(f"break @{p['time']:.1f}s → {p['brand']['name']} ({p['match_method']})"
+        doubt = review_reason(p)
+        p["status"] = "review" if doubt else "placed"
+        p["review_reason"] = doubt
+
+    for p in placed:
+        log(f"break @{p['time']:.1f}s → {p['brand']['name']} ({p['match_method']}, {p['status']})"
             + (f" · judge: cut={p['judge']['cut_verdict']} brand={p['judge']['brand_verdict']}" if p.get("judge") else ""))
     xml = vmap.build_vmap(job_id, placed, pacing["ad_duration_seconds"], creative_base_url)
     return {
@@ -126,3 +139,41 @@ def run_job(job_id: str, video_path: str, pacing: dict | None = None, owner_id: 
     except Exception as e:
         traceback.print_exc()
         store.update(job_id, status="error", message=f"{type(e).__name__}: {e}"[:500])
+
+
+def review_reason(p: dict) -> str | None:
+    """Why a break needs a human look, in the user's words; None when confident."""
+    doubts = []
+    if p["match_method"] == "fallback":
+        doubts.append("no brand in your catalogue fits these scenes, so the house promo was used")
+    elif p["match_method"] == "tag_affinity":
+        doubts.append("the brand was chosen by context overlap only")
+    if p["cut_safety"] < 0.65:
+        doubts.append(f"the cut is only moderately clean (safety {p['cut_safety']:.2f})")
+    j = p.get("judge") or {}
+    if j.get("cut_verdict") == "acceptable":
+        doubts.append("the reviewer found the cut acceptable rather than natural")
+    if j.get("brand_verdict") == "neutral":
+        doubts.append("the reviewer found the brand a neutral fit, not a strong one")
+    if j.get("brand_verdict") in ("mismatch", "violation"):
+        doubts.append(f"the reviewer flagged the brand as a {j['brand_verdict']}")
+    return "; ".join(doubts) or None
+
+
+def apply_decision(result: dict, break_id: str, action: str, ad_seconds: int, job_id: str, creative_base_url: str) -> dict:
+    """User approves a break under review, or removes any break. Rebuilds the manifest."""
+    breaks = result["breaks"]
+    target = next((b for b in breaks if b["id"] == break_id), None)
+    if not target:
+        raise KeyError(break_id)
+    if action == "approve":
+        target["status"] = "placed"
+        target["approved"] = True
+    elif action == "remove":
+        result["breaks"] = [b for b in breaks if b["id"] != break_id]
+        result.setdefault("rejected", []).append({**{k: v for k, v in target.items() if k not in ("brand", "brand_rows")},
+                                                  "rejected_because": "removed by you"})
+    else:
+        raise ValueError(action)
+    result["vmap"] = vmap.build_vmap(job_id, result["breaks"], ad_seconds, creative_base_url)
+    return result

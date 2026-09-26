@@ -15,7 +15,8 @@ def _dur(seconds: int) -> str:
 def build_vmap(job_id: str, breaks: list[dict], ad_seconds: int, creative_base_url: str) -> str:
     out = ['<?xml version="1.0" encoding="UTF-8"?>',
            '<vmap:VMAP xmlns:vmap="http://www.iab.net/videosuite/vmap" version="1.0">']
-    for i, b in enumerate(breaks, 1):
+    live = [b for b in breaks if b.get("status", "placed") == "placed"]
+    for i, b in enumerate(live, 1):
         brand = b["brand"]
         creative = brand.get("creative", {})
         media = creative.get("video_url") or f"{creative_base_url}/{brand['id']}.mp4"

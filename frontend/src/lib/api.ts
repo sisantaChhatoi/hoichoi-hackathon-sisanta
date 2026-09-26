@@ -21,6 +21,7 @@ export type Break = Candidate & {
   brand: Brand; match_method: string; rationale: string;
   brand_rows: { brand_id: string; blocked_by: string[]; affinity: number }[];
   judge?: Verdict;
+  status?: "placed" | "review"; review_reason?: string | null; approved?: boolean;
 };
 export type Job = {
   id: string; title: string; status: "queued" | "running" | "done" | "error"; stage?: string; progress?: number;
@@ -68,6 +69,7 @@ export const api = {
     const fd = new FormData(); fd.append("file", file); fd.append("title", title);
     return call("/jobs/upload", { method: "POST", body: fd }).then(j<Job>);
   },
+  decide: (id: string, breakId: string, action: "approve" | "remove") => call(`/jobs/${id}/breaks/${breakId}`, { method: "POST" }, { action }).then(j<Job>),
   retry: (id: string) => call(`/jobs/${id}/retry`, { method: "POST" }).then(j<Job>),
   deleteJob: (id: string) => call(`/jobs/${id}`, { method: "DELETE" }).then(j<{ ok: boolean }>),
   place: (id: string, pacing?: Record<string, number>) => call(`/jobs/${id}/place`, { method: "POST" }, { pacing }).then(j<Job>),
