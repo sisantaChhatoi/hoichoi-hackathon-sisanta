@@ -24,7 +24,7 @@ app.mount("/media", StaticFiles(directory=str(config.MEDIA_DIR)), name="media")
 def health():
     from .pipeline import judge
     return {"ok": True, "models": config.GEMINI_MODELS, "text_models": config.GEMINI_TEXT_MODELS,
-            "judge": judge.enabled(), "supabase": bool(config.SUPABASE_URL)}
+            "judge": judge.provider(), "supabase": bool(config.SUPABASE_URL)}
 
 
 @app.get("/vocab")

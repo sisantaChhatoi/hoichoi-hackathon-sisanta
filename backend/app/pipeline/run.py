@@ -58,13 +58,14 @@ def place(job_id: str, analysis: dict, catalogue: dict, pacing: dict, creative_b
     vetoed: dict[str, str] = {}          # candidate id → reason
     exclusions: dict[str, dict] = {}     # break id → {brand_id: reason}
     judge_log: list[dict] = []
-    for round_no in range(3):
+    placed, rejected = [], []
+    for round_no in range(2):
         selected, rejected = scoring.select_breaks(cands, duration, pacing, vetoed)
         log(f"scoring: {len(cands)} candidates → {len(selected)} breaks" + (f" (round {round_no+1})" if round_no else ""))
         placed = matching.match(selected, scenes_by_id, catalogue, log=log, use_llm=use_llm, exclusions=exclusions)
         if not (use_judge and judge.enabled()):
             if round_no == 0:
-                log("judge: skipped (no ANTHROPIC_API_KEY)")
+                log("judge: skipped")
             break
         try:
             verdicts = judge.judge(video_path, placed, scenes_by_id, log=log)
@@ -88,6 +89,15 @@ def place(job_id: str, analysis: dict, catalogue: dict, pacing: dict, creative_b
         if not changed:
             break
         log("judge: requested changes, re-placing")
+
+    # Never ship a break the judge still calls jarring: fewer breaks beats a bad one.
+    still_bad = [p for p in placed if p.get("judge", {}).get("cut_verdict") == "jarring"]
+    if still_bad:
+        for p in still_bad:
+            rejected.append({**{k: v for k, v in p.items() if k not in ("brand", "brand_rows")},
+                             "rejected_because": f"judge: jarring cut — {p['judge']['notes']}"})
+            log(f"judge: dropping break @{p['time']:.1f}s (still jarring after re-placement)")
+        placed = [p for p in placed if p not in still_bad]
 
     for p in placed:
         log(f"break @{p['time']:.1f}s → {p['brand']['name']} ({p['match_method']})"
