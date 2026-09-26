@@ -24,9 +24,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <TooltipProvider>
           <Nav />
           <main className="mx-auto w-full max-w-[1320px] px-5 py-12 lg:px-6">{children}</main>
-          <footer className="mx-auto max-w-[1320px] px-5 pb-8 text-xs text-muted-foreground lg:px-6">
-            All brands in the catalogue are fictional.
-          </footer>
           <JobWatcher />
           <Toaster position="bottom-right" closeButton offset={24} gap={12}
             icons={{ success: <CircleCheck className="size-7 text-success" strokeWidth={1.75} />, error: <CircleAlert className="size-7 text-destructive" strokeWidth={1.75} /> }}

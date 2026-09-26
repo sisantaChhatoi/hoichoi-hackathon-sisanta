@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api, Job } from "@/lib/api";
 
 const KEY = "cuepoint.jobStatus";
+const START = "cuepoint.sessionStart";
 
 /** Polls the job list and raises a toast whenever a job finishes or fails.
  *  Statuses are remembered per browser session so navigating never re-toasts. */
@@ -13,7 +14,12 @@ export function JobWatcher() {
   const seen = useRef<Record<string, string> | null>(null);
 
   useEffect(() => {
-    try { seen.current = JSON.parse(sessionStorage.getItem(KEY) ?? "null"); } catch { seen.current = null; }
+    let sessionStart = Date.now() / 1000;
+    try {
+      seen.current = JSON.parse(sessionStorage.getItem(KEY) ?? "null");
+      const saved = Number(sessionStorage.getItem(START));
+      if (saved) sessionStart = saved; else sessionStorage.setItem(START, String(sessionStart));
+    } catch { seen.current = null; }
     let stop = false;
     const tick = async () => {
       let jobs: Job[];
@@ -23,7 +29,8 @@ export function JobWatcher() {
       for (const j of jobs) {
         next[j.id] = j.status;
         const prev = seen.current?.[j.id];
-        const wasActive = prev === "running" || prev === "queued";
+        // a job we watched running, or one created in this session that finished between two polls
+        const wasActive = prev === "running" || prev === "queued" || (prev === undefined && j.created_at >= sessionStart - 30);
         if (seen.current && wasActive && j.status === "done") {
           toast.success(`${j.title} is ready`, {
             description: `${j.breaks ?? 0} ad break${j.breaks === 1 ? "" : "s"} placed`,
