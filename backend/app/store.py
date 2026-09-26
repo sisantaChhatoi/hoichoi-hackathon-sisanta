@@ -100,15 +100,23 @@ def save_job(job: dict, force_mirror: bool = False) -> None:
 def list_jobs() -> list[dict]:
     jobs: dict[str, Any] = {}
     rows = _run(lambda c: c.execute(
-        "select data - 'analysis' - 'result' - 'log' from public.jobs order by updated_at desc limit 50").fetchall())
-    for (data,) in rows or []:
-        jobs[data["id"]] = data
+        "select data - 'analysis' - 'result' - 'log', "
+        "(data->'analysis'->'media'->>'duration')::float, jsonb_array_length(data->'result'->'breaks') "
+        "from public.jobs order by updated_at desc limit 200").fetchall())
+    for data, duration, breaks in rows or []:
+        jobs[data["id"]] = {**data, "duration": duration, "breaks": breaks}
     for p in config.JOBS_DIR.glob("*.json"):
         j = json.loads(p.read_text())
-        jobs.setdefault(j["id"], j)
-    out = sorted(jobs.values(), key=lambda j: j.get("created_at", 0), reverse=True)
-    # summaries only — results can be large
-    return [{k: v for k, v in j.items() if k not in ("analysis", "result", "log")} for j in out]
+        jobs.setdefault(j["id"], _summary(j))
+    return sorted(jobs.values(), key=lambda j: j.get("created_at", 0), reverse=True)
+
+
+def _summary(j: dict) -> dict:
+    """List view of a job: no analysis/result/log, plus a few derived fields."""
+    s = {k: v for k, v in j.items() if k not in ("analysis", "result", "log")}
+    s["duration"] = ((j.get("analysis") or {}).get("media") or {}).get("duration")
+    s["breaks"] = len((j.get("result") or {}).get("breaks") or []) if j.get("result") else None
+    return s
 
 
 def delete_job(job_id: str) -> None:

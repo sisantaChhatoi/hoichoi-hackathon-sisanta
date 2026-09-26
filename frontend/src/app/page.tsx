@@ -1,17 +1,20 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Film, Upload, Trash2, ArrowRight } from "lucide-react";
-import { api, Job, fmt } from "@/lib/api";
+import { ArrowRight, Upload } from "lucide-react";
+import { api, Job } from "@/lib/api";
 import { uploadToBlob, blobUploadsEnabled } from "@/lib/blob";
-import { stageLabel } from "@/lib/copy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { EpisodeList } from "@/components/EpisodeList";
 import { cn } from "cn";
+
+const POINTS = [
+  ["Where", "Scene boundaries and natural pauses, snapped to real silence — never mid-sentence."],
+  ["Whether", "Your pacing rules decide how many breaks an episode can carry, and where they may not go."],
+  ["What", "A brand is placed only where its context fits, and never next to scenes it must avoid."],
+];
 
 export default function Home() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -35,120 +38,83 @@ export default function Home() {
     e.preventDefault(); setErr("");
     try {
       let job: Job;
+      const name = title || (file ? file.name.replace(/\.\w+$/, "") : "");
       if (file) {
         if (await blobUploadsEnabled()) {
           setBusy("Uploading…");
           const publicUrl = await uploadToBlob(file, (p) => setBusy(`Uploading ${p}%`));
-          job = await api.createFromUrl(publicUrl, title || file.name.replace(/\.\w+$/, ""));
+          job = await api.createFromUrl(publicUrl, name);
         } else {
           setBusy("Uploading…");
-          job = await api.upload(file, title || file.name.replace(/\.\w+$/, ""));
+          job = await api.upload(file, name);
         }
       } else if (url) {
         setBusy("Starting…");
-        job = await api.createFromUrl(url, title);
+        job = await api.createFromUrl(url, name);
       } else return;
       router.push(`/jobs/${job.id}`);
     } catch (e) { setErr(String(e)); } finally { setBusy(null); }
   }
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-2">
-        <h1 className="text-4xl">Ad breaks that respect the story</h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Cuepoint watches an episode the way an editor would. It splits it into scenes, finds the pauses where a cut won&apos;t jar,
-          applies your pacing rules, and places the brand that fits the moment. Every decision is explained, exported as a VMAP
-          manifest, and playable right here.
-        </p>
+    <div className="space-y-14">
+      <section className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-20">
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <h1 className="text-4xl leading-tight">Ad breaks that respect the story</h1>
+            <p className="max-w-xl text-muted-foreground">
+              Cuepoint watches an episode the way an editor would, then places every break where it belongs and explains why.
+              The result is a VMAP manifest, a decision report, and a preview you can play right here.
+            </p>
+          </div>
+          <ul className="max-w-xl space-y-3">
+            {POINTS.map(([k, v]) => (
+              <li key={k} className="grid grid-cols-[84px_1fr] gap-3 text-sm">
+                <span className="pt-0.5 font-mono text-xs uppercase tracking-wide text-muted-foreground">{k}</span>
+                <span>{v}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={(e) => { e.preventDefault(); setDrag(false); setFile(e.dataTransfer.files?.[0] ?? null); }}
+            onClick={() => fileInput.current?.click()}
+            className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-9 text-center text-sm transition-colors",
+              drag ? "border-foreground bg-accent/60" : "hover:bg-accent/40")}>
+            <Upload className="size-5 text-muted-foreground" />
+            {file ? (
+              <><span className="font-medium">{file.name}</span><span className="text-xs text-muted-foreground">{(file.size / 1e6).toFixed(0)} MB</span></>
+            ) : (
+              <><span>Drag a video here, or browse</span><span className="text-xs text-muted-foreground">MP4 · a 25-minute episode takes about four minutes</span></>
+            )}
+            <input ref={fileInput} type="file" accept="video/mp4,video/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="title">Title</Label>
+            <Input id="title" placeholder="Episode title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="url">Video URL</Label>
+            <Input id="url" placeholder="Paste a video link" value={url} onChange={(e) => setUrl(e.target.value)} disabled={!!file} />
+          </div>
+          <Button type="submit" className="w-full" disabled={!!busy || (!file && !url)}>
+            {busy ?? <>Analyse episode <ArrowRight data-icon="inline-end" /></>}
+          </Button>
+          {err && <p className="text-sm text-destructive">{err}</p>}
+        </form>
       </section>
 
-      <div className="grid items-start gap-8 lg:grid-cols-[400px_minmax(0,1fr)] lg:gap-20">
-        <div className="h-fit space-y-4">
-          <div className="space-y-1">
-            <h2 className="font-semibold">New episode</h2>
-            <p className="text-sm text-muted-foreground">MP4, any length. A 25-minute episode takes about four minutes.</p>
-          </div>
-          <form onSubmit={submit} className="space-y-4">
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-              onDragLeave={() => setDrag(false)}
-              onDrop={(e) => { e.preventDefault(); setDrag(false); setFile(e.dataTransfer.files?.[0] ?? null); }}
-              onClick={() => fileInput.current?.click()}
-              className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-8 text-center text-sm transition-colors",
-                drag ? "border-primary bg-primary/5" : "hover:bg-accent/40")}>
-              <Upload className="size-5 text-muted-foreground" />
-              {file ? <span className="font-medium">{file.name}</span> : <span className="text-muted-foreground">Drag a video here, or browse</span>}
-              {file && <span className="text-xs text-muted-foreground">{(file.size / 1e6).toFixed(0)} MB</span>}
-              <input ref={fileInput} type="file" accept="video/mp4,video/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" placeholder="Episode title" value={title} onChange={(e) => setTitle(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="url">Video URL</Label>
-              <Input id="url" placeholder="Paste a video link" value={url} onChange={(e) => setUrl(e.target.value)} disabled={!!file} />
-            </div>
-            <Button type="submit" className="w-full" disabled={!!busy || (!file && !url)}>
-              {busy ?? <>Analyse episode<ArrowRight data-icon="inline-end" /></>}
-            </Button>
-            {err && <p className="text-sm text-destructive">{err}</p>}
-          </form>
+      <section className="space-y-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold">Episodes</h2>
+          <span className="text-sm text-muted-foreground">{jobs.length ? `${jobs.length} analysed or in progress` : ""}</span>
         </div>
-
-        <div>
-          <div className="mb-2 flex items-baseline justify-between">
-            <h2 className="font-semibold">Episodes</h2>
-            <span className="text-sm text-muted-foreground">{jobs.length ? `${jobs.length} analysed or in progress` : "Nothing analysed yet"}</span>
-          </div>
-          {jobs.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-0">Title</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-10 pr-0" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {jobs.map((j) => (
-                  <TableRow key={j.id}>
-                    <TableCell className="py-3 pl-0">
-                      <Link href={`/jobs/${j.id}`} className="flex items-center gap-2 font-medium hover:underline">
-                        <Film className="size-4 text-muted-foreground" />{j.title}
-                        <ArrowRight className="size-3.5 text-muted-foreground" />
-                      </Link>
-                    </TableCell>
-                    <TableCell className="py-3"><Status job={j} /></TableCell>
-                    <TableCell className="py-3 pr-0 text-right">
-                      <Button variant="ghost" size="icon" aria-label="Remove"
-                        onClick={() => { if (confirm(`Remove "${j.title}"?`)) api.deleteJob(j.id).then(() => setJobs((s) => s.filter((x) => x.id !== j.id))); }}>
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="py-6 text-sm text-muted-foreground">No episodes yet. Analyse your first one to see it here.</p>
-          )}
-        </div>
-      </div>
+        <EpisodeList jobs={jobs} limit={8} onRemoved={(id) => setJobs((s) => s.filter((x) => x.id !== id))} />
+      </section>
     </div>
   );
 }
-
-function Status({ job }: { job: Job }) {
-  if (job.status === "done") return <span className="text-sm font-medium text-success">Ready</span>;
-  if (job.status === "error") return <span className="text-sm font-medium text-destructive">Failed</span>;
-  return (
-    <div className="flex min-w-40 items-center gap-2">
-      <Progress value={job.progress ?? 0} className="w-24" />
-      <span className="text-xs text-muted-foreground">{stageLabel[job.stage ?? "queued"] ?? job.stage}</span>
-    </div>
-  );
-}
-
-export { fmt };

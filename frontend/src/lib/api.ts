@@ -23,6 +23,7 @@ export type Break = Candidate & {
 export type Job = {
   id: string; title: string; status: "queued" | "running" | "done" | "error"; stage?: string; progress?: number;
   message?: string; created_at: number; video_url?: string | null; log?: string[];
+  duration?: number | null; breaks?: number | null;
   analysis?: { media: { duration: number; width: number; height: number }; scenes: Scene[]; speech: { start: number; end: number }[]; silence_count: number; shot_cut_count: number } | null;
   result?: { pacing: Record<string, number>; candidates: Candidate[]; rejected: Candidate[]; breaks: Break[]; vmap: string;
     judge?: (Verdict & { round: number; brand_id: string; time: number })[] } | null;

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "cn";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const empty: Brand = { id: "", name: "", category: "", tagline: "", target_contexts: [], negative_contexts: [], negative_description: "", creative: { bg: "#334155", fg: "#f8fafc" } };
 
@@ -19,6 +20,8 @@ export default function Brands() {
   const [b, setB] = useState<Brand>(empty);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [view, setView] = useState<Brand | null>(null);
+  const [pending, setPending] = useState<Brand | null>(null);
   useEffect(() => { api.brands().then((c) => setBrands(c.brands)); api.vocab().then((v) => setTags(v.tags)); }, []);
 
   const toggle = (k: "target_contexts" | "negative_contexts", t: string) =>
@@ -62,7 +65,7 @@ export default function Brands() {
           </TableHeader>
           <TableBody>
             {brands.map((x) => (
-              <TableRow key={x.id} className="hover:bg-accent/40">
+              <TableRow key={x.id} className="cursor-pointer hover:bg-accent/40" onClick={() => setView(x)}>
                 <TableCell className="py-3.5 pl-6 align-top">
                   <div className="flex items-start gap-3">
                     <span className="mt-0.5 size-4 shrink-0 rounded-sm border border-border" style={{ background: x.creative?.bg }} />
@@ -76,13 +79,17 @@ export default function Brands() {
                 <TableCell className="py-3.5 align-top"><TagList tags={x.target_contexts} /></TableCell>
                 <TableCell className="py-3.5 align-top"><TagList tags={x.negative_contexts} tone="destructive" /></TableCell>
                 <TableCell className="py-3.5 pr-6 text-right align-top">
-                  <Button variant="ghost" size="icon" aria-label="Remove" onClick={() => api.deleteBrand(x.id).then((c) => setBrands(c.brands))}><Trash2 /></Button>
+                  <Button variant="ghost" size="icon" aria-label="Remove" onClick={(e) => { e.stopPropagation(); setPending(x); }}><Trash2 /></Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      <BrandDialog brand={view} onClose={() => setView(null)} />
+      <ConfirmDialog open={!!pending} title={`Remove ${pending?.name}?`} description="It will no longer be considered for any placement."
+        onClose={() => setPending(null)} onConfirm={() => { if (pending) api.deleteBrand(pending.id).then((c) => setBrands(c.brands)); }} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto border border-border bg-card shadow-[var(--shadow-float)] ring-0 sm:max-w-2xl">
@@ -168,5 +175,43 @@ function TagPicker({ label, hint, tags, selected, onToggle, tone }: { label: str
         })}
       </div>
     </div>
+  );
+}
+
+function BrandDialog({ brand, onClose }: { brand: Brand | null; onClose: () => void }) {
+  const [noVideo, setNoVideo] = useState(false);
+  const b = brand;
+  return (
+    <Dialog open={!!b} onOpenChange={(o) => { if (!o) { onClose(); setNoVideo(false); } }}>
+      <DialogContent className="border border-border bg-card p-0 shadow-[var(--shadow-float)] ring-0 sm:max-w-xl" showCloseButton>
+        {b && (
+          <>
+            <div className="aspect-video w-full overflow-hidden rounded-t-lg" style={{ background: b.creative?.bg, color: b.creative?.fg }}>
+              {!noVideo ? (
+                <video key={b.id} src={b.creative?.video_url ?? `/creatives/${b.id}.mp4`} autoPlay muted loop playsInline className="h-full w-full object-cover" onError={() => setNoVideo(true)} />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+                  <div className="text-3xl font-extrabold">{b.name}</div>
+                  <div className="mt-2 opacity-90">{b.tagline}</div>
+                </div>
+              )}
+            </div>
+            <div className="space-y-4 p-6">
+              <DialogHeader>
+                <DialogTitle>{b.name} <span className="ml-2 text-sm font-normal text-muted-foreground">{b.category}</span></DialogTitle>
+                <DialogDescription>{b.tagline}</DialogDescription>
+              </DialogHeader>
+              <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[130px_1fr]">
+                <dt className="text-muted-foreground">Target contexts</dt><dd>{b.target_contexts.join(", ") || "—"}</dd>
+                <dt className="text-muted-foreground">Hard blocks</dt><dd className="text-destructive/80">{b.negative_contexts.join(", ") || "—"}</dd>
+                {b.negative_description && (<><dt className="text-muted-foreground">Additional rule</dt><dd>{b.negative_description}</dd></>)}
+                <dt className="text-muted-foreground">Creative</dt>
+                <dd className="flex items-center gap-2"><span className="size-4 rounded-sm border" style={{ background: b.creative?.bg }} /><span className="font-mono text-xs">{b.creative?.bg}</span><span className="size-4 rounded-sm border" style={{ background: b.creative?.fg }} /><span className="font-mono text-xs">{b.creative?.fg}</span></dd>
+              </dl>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
