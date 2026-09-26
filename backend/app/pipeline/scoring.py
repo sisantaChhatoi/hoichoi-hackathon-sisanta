@@ -63,9 +63,15 @@ def _score_point(t0: float, boundary_quality: float, source: str, scenes, speech
     else:
         gap, gap_kind = sgap, "speech_gap"
     if gap:
-        # cut where the pause is quietest: its midpoint, but never more than SNAP_WINDOW from t0
-        cut = min(max((gap["start"] + gap["end"]) / 2, t0 - SNAP_WINDOW), t0 + SNAP_WINDOW)
-        cut = min(max(cut, gap["start"] + 0.15), gap["end"] - 0.15) if gap["end"] - gap["start"] > 0.3 else cut
+        if gap["start"] <= t0 <= gap["end"]:
+            # the boundary already sits in a pause: keep it, just off the pause's edges
+            cut = min(max(t0, gap["start"] + 0.15), gap["end"] - 0.15) if gap["dur"] > 0.3 else t0
+        else:
+            # move to the nearest edge of the pause and a little inside it, never more than SNAP_WINDOW away
+            edge = gap["start"] if abs(t0 - gap["start"]) <= abs(t0 - gap["end"]) else gap["end"]
+            inside = min(gap["dur"] / 2, 0.6)
+            cut = edge + inside if edge == gap["start"] else edge - inside
+            cut = min(max(cut, t0 - SNAP_WINDOW), t0 + SNAP_WINDOW)
         gap_len = gap["dur"]
     else:
         cut, gap_len = t0, 0.0
