@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Nav } from "@/components/Nav";
 import { JobWatcher } from "@/components/JobWatcher";
 import { Toaster } from "sonner";
+import { CircleAlert, CircleCheck } from "lucide-react";
 import "./globals.css";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -28,14 +29,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </footer>
           <JobWatcher />
           <Toaster position="bottom-right" closeButton offset={24} gap={12}
-            style={{ "--width": "440px", "--toast-close-button-start": "auto", "--toast-close-button-end": "8px", "--toast-close-button-transform": "translate(0, 8px)" } as React.CSSProperties}
+            icons={{ success: <CircleCheck className="size-7 text-success" strokeWidth={1.75} />, error: <CircleAlert className="size-7 text-destructive" strokeWidth={1.75} /> }}
+            style={{ "--width": "440px", "--toast-close-button-start": "auto", "--toast-close-button-end": "8px", "--toast-close-button-transform": "translate(0, 6px)" } as React.CSSProperties}
             toastOptions={{
               classNames: {
-                toast: "!rounded-lg !border !border-border !bg-card !text-foreground !shadow-[var(--shadow-float)] !p-4 !gap-3 font-sans [&_[data-icon]]:!text-foreground [&_[data-icon]]:!size-6 [&_[data-icon]_svg]:!size-6",
+                toast: "!rounded-lg !border !border-border !bg-card !text-foreground !shadow-[var(--shadow-float)] !p-4 !gap-3 font-sans !pr-9 [&_[data-icon]]:!size-7 [&_[data-icon]]:!shrink-0",
                 title: "!text-sm !font-medium",
                 description: "!text-sm !text-muted-foreground",
                 actionButton: "!h-8 !rounded-md !bg-foreground !px-3 !text-sm !font-medium !text-background",
-                closeButton: "!static !order-last !ml-2 !size-7 !border-border !bg-transparent !text-muted-foreground hover:!bg-accent",
+                closeButton: "!size-6 !rounded-none !border-0 !bg-transparent !shadow-none !text-muted-foreground hover:!bg-transparent hover:!text-foreground",
               },
             }} />
         </TooltipProvider>
