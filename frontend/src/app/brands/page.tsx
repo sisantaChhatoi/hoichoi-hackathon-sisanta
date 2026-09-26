@@ -38,7 +38,7 @@ export default function Brands() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Brand catalogue</h1>
+          <h1 className="text-4xl">Brand catalogue</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
             Target contexts attract a brand to a scene. Hard blocks are absolute: a brand is never placed next to a scene carrying any of them.
             New brands are matched without code changes.

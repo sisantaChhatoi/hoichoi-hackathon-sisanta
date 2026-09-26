@@ -55,14 +55,15 @@ export default function Home() {
   return (
     <div className="space-y-8">
       <section className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Context-aware ad breaks</h1>
+        <h1 className="text-4xl">Ad breaks that respect the story</h1>
         <p className="max-w-2xl text-muted-foreground">
-          Upload an episode. Cuepoint segments it into scenes, finds cuts a viewer won&apos;t notice, decides how many breaks the
-          pacing rules allow, and places the brand that fits each moment — with a manifest, a decision report and a playable preview.
+          Cuepoint watches an episode the way an editor would. It splits it into scenes, finds the pauses where a cut won&apos;t jar,
+          applies your pacing rules, and places the brand that fits the moment. Every decision is explained, exported as a VMAP
+          manifest, and playable right here.
         </p>
       </section>
 
-      <div className="grid items-start gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
+      <div className="grid items-start gap-8 lg:grid-cols-[400px_minmax(0,1fr)] lg:gap-20">
         <div className="h-fit space-y-4">
           <div className="space-y-1">
             <h2 className="font-semibold">New episode</h2>

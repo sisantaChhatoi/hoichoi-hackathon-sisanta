@@ -53,7 +53,7 @@ export default function JobPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{job.title}</h1>
+        <h1 className="text-4xl">{job.title}</h1>
         {a && <span className="text-sm text-muted-foreground">{fmt(a.media.duration)} · {a.media.width}×{a.media.height}</span>}
         {r && (
           <div className="ml-auto flex gap-2">
