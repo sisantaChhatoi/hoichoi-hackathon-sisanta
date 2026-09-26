@@ -61,9 +61,12 @@ def affinity(brand: dict, before: dict, after: dict) -> float:
     return round(score / max(len(tgt), 1) * 3, 3)
 
 
-def match(breaks: list[dict], scenes_by_id: dict, catalogue: dict, log=print, use_llm: bool = True) -> list[dict]:
+def match(breaks: list[dict], scenes_by_id: dict, catalogue: dict, log=print, use_llm: bool = True,
+          exclusions: dict | None = None) -> list[dict]:
+    """`exclusions` maps break id → {brand_id: reason} for brands vetoed on that slot (e.g. by the judge)."""
     brands = catalogue["brands"]
     fallback = catalogue.get("fallback")
+    exclusions = exclusions or {}
     per_break = []
     for br in breaks:
         before, after = scenes_by_id[br["scene_before"]], scenes_by_id[br["scene_after"]]
@@ -71,6 +74,8 @@ def match(breaks: list[dict], scenes_by_id: dict, catalogue: dict, log=print, us
         rows = []
         for b in brands:
             hits = hard_block(b, bt, at)
+            if b["id"] in exclusions.get(br["id"], {}):
+                hits = hits + [exclusions[br["id"]][b["id"]]]
             rows.append({"brand_id": b["id"], "blocked_by": hits, "affinity": affinity(b, before, after)})
         allowed = [r for r in rows if not r["blocked_by"]]
         per_break.append({"break": br, "before": before, "after": after, "rows": rows, "allowed": allowed})

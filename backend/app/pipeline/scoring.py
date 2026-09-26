@@ -144,9 +144,11 @@ def score_candidates(analysis: dict, silences: list[dict], shot_cuts: list[float
     return sorted(dedup, key=lambda c: c["time"])
 
 
-def select_breaks(cands: list[dict], duration: float, pacing: dict) -> tuple[list[dict], list[dict]]:
+def select_breaks(cands: list[dict], duration: float, pacing: dict, vetoed: dict | None = None) -> tuple[list[dict], list[dict]]:
     """Greedy: best-scoring candidates first, respecting all pacing rules.
+    `vetoed` maps candidate id → reason (e.g. from the judge); those are rejected first.
     Returns (selected, rejected_with_reason)."""
+    vetoed = vetoed or {}
     hours = max(duration / 3600.0, 1e-6)
     max_breaks = max(1, int(pacing["max_breaks_per_hour"] * hours + 0.5))
     ad_len = pacing["ad_duration_seconds"]
@@ -155,7 +157,9 @@ def select_breaks(cands: list[dict], duration: float, pacing: dict) -> tuple[lis
     selected, rejected = [], []
     for c in sorted(cands, key=lambda c: -c["cut_safety"]):
         why = None
-        if c["mid_speech"]:
+        if c["id"] in vetoed:
+            why = vetoed[c["id"]]
+        elif c["mid_speech"]:
             why = "mid-speech cut"
         elif c["cut_safety"] < pacing["min_cut_safety"]:
             why = f"cut_safety {c['cut_safety']} < min {pacing['min_cut_safety']}"

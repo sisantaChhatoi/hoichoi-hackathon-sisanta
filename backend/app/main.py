@@ -22,7 +22,9 @@ app.mount("/media", StaticFiles(directory=str(config.MEDIA_DIR)), name="media")
 
 @app.get("/health")
 def health():
-    return {"ok": True, "models": config.GEMINI_MODELS, "supabase": bool(config.SUPABASE_URL)}
+    from .pipeline import judge
+    return {"ok": True, "models": config.GEMINI_MODELS, "text_models": config.GEMINI_TEXT_MODELS,
+            "judge": judge.enabled(), "supabase": bool(config.SUPABASE_URL)}
 
 
 @app.get("/vocab")
@@ -144,6 +146,7 @@ def _analysis_summary(a: dict | None):
 class Replace(BaseModel):
     pacing: dict | None = None
     use_llm: bool = True
+    use_judge: bool = True
 
 
 @app.post("/jobs/{job_id}/place")
@@ -153,7 +156,9 @@ def replace(job_id: str, body: Replace):
     if not j or not j.get("analysis"):
         raise HTTPException(404, "job has no analysis yet")
     pacing = {**config.DEFAULT_PACING, **(body.pacing or {})}
-    result = run.place(job_id, j["analysis"], matching.load_brands(), pacing, config.CREATIVE_BASE_URL, use_llm=body.use_llm)
+    video = _local_video_path(job_id)
+    result = run.place(job_id, j["analysis"], matching.load_brands(), pacing, config.CREATIVE_BASE_URL,
+                       use_llm=body.use_llm, video_path=str(video) if video.exists() else None, use_judge=body.use_judge)
     store.update(job_id, result=result)
     return job(job_id)
 

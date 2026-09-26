@@ -11,12 +11,18 @@ services:
         sync: false
       - key: GEMINI_MODELS
         value: gemini-3.8-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3.5-flash-lite
+      - key: ANTHROPIC_API_KEY
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_KEY
         sync: false
       - key: CORS_ORIGINS
         value: "*"
+      - key: CREATIVE_BASE_URL
+        sync: false
+      - key: GEMINI_TEXT_MODELS
+        value: gemini-3.1-pro-preview,gemini-3.8-flash,gemini-3.7-flash
       - key: SHOT_DETECT
         value: "0"
       - key: DATA_DIR
