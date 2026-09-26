@@ -2,7 +2,9 @@
 strict JSON schema, disk cache, retry with backoff and model fallback."""
 import hashlib
 import json
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import httpx
@@ -254,17 +256,33 @@ def analyze_video(file: dict, duration: float, log=print, on_progress=None) -> d
     if len(chunks) > 1 and chunks[-1][1] - chunks[-1][0] < 45:
         a, _ = chunks.pop()
         chunks[-1] = (chunks[-1][0], duration)
+    # Chunks are independent → analyse a few at a time (modest parallelism keeps
+    # well inside rate limits while cutting wall time roughly by the worker count).
+    log(f"gemini: analysing {len(chunks)} chunks, {min(config.CHUNK_WORKERS, len(chunks))} at a time")
+    results: list[dict | None] = [None] * len(chunks)
+    done = 0
+    lock = threading.Lock()
+
+    def work(i: int):
+        a, b = chunks[i]
+        return i, analyze_chunk(file, a, b, log=lambda m: log(f"[{_mmss(a)}-{_mmss(b)}] {m}"))
+
+    with ThreadPoolExecutor(max_workers=config.CHUNK_WORKERS) as pool:
+        for i, res in pool.map(work, range(len(chunks))):
+            results[i] = res
+            with lock:
+                done += 1
+                if on_progress:
+                    on_progress(done / len(chunks))
+
     scenes, speech, pauses = [], [], []
-    for i, (a, b) in enumerate(chunks):
-        log(f"gemini: analysing chunk {i+1}/{len(chunks)} ({_mmss(a)}-{_mmss(b)})")
-        res = analyze_chunk(file, a, b, log=log)
+    for i, res in enumerate(results):
+        assert res is not None
         for s in res["scenes"]:
             s["chunk_index"] = i
         scenes += res["scenes"]
         speech += res["speech"]
         pauses += res.get("pause_points", [])
-        if on_progress:
-            on_progress((i + 1) / len(chunks))
     scenes.sort(key=lambda s: s["start"])
     speech.sort(key=lambda p: p["start"])
     # merge overlapping speech passages

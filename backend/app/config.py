@@ -52,4 +52,5 @@ DEFAULT_PACING = {
 # Gemini chunking: keep each request small so free-tier TPM is never hit and a
 # failed chunk can be retried alone.
 CHUNK_SECONDS = 300
+CHUNK_WORKERS = int(os.environ.get("CHUNK_WORKERS", "4"))  # concurrent Gemini chunk calls
 VIDEO_FPS = 1.0
