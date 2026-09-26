@@ -43,7 +43,11 @@ export default function Player({ src, breaks, adSeconds, duration, seekTo }:
     const v = video.current; if (!v) return;
     v.currentTime = Math.min(Math.max(0, to), duration); lastT.current = v.currentTime; setT(v.currentTime); v.play();
   }, [duration]);
-  useEffect(() => { if (seekTo != null) seek(seekTo); }, [seekTo, seek]);
+  /** Jumping to a break on purpose re-arms it so the ad plays again. */
+  const rearm = useCallback((from: number) => {
+    for (const b of breaks) if (b.time >= from && b.time <= from + 6) played.current.delete(b.id);
+  }, [breaks]);
+  useEffect(() => { if (seekTo != null) { rearm(seekTo); seek(seekTo); } }, [seekTo, seek, rearm]);
 
   function resume() { setAd(null); video.current?.play(); }
   function toggle() { const v = video.current; if (!v || ad) return; v.paused ? v.play() : v.pause(); }
@@ -106,7 +110,7 @@ export default function Player({ src, breaks, adSeconds, duration, seekTo }:
           <div className="absolute left-0 top-2 h-1 rounded-full bg-white group-hover:h-1.5" style={{ width: pct(t) }} />
           {breaks.map((b) => (
             <button key={b.id} type="button" title={`${fmt(b.time)} · ${b.brand.name}`}
-              onClick={(e) => { e.stopPropagation(); seek(b.time - 4); }}
+              onClick={(e) => { e.stopPropagation(); played.current.delete(b.id); seek(b.time - 4); }}
               className={cn("absolute top-0.5 h-4 w-1 rounded-sm transition hover:scale-x-150", played.current.has(b.id) ? "bg-success" : "bg-primary-foreground")}
               style={{ left: `calc(${pct(b.time)} - 2px)`, background: played.current.has(b.id) ? undefined : b.brand.creative?.bg ?? "#fff", outline: "1px solid rgba(255,255,255,.7)" }} />
           ))}
