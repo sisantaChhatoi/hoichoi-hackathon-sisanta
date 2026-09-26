@@ -1,6 +1,8 @@
 """Emit a VMAP 1.0 manifest with inline VAST 3.0 ads (IAB standards)."""
 from xml.sax.saxutils import escape
 
+from .creatives import creative_url
+
 
 def _hms(t: float) -> str:
     h, rem = divmod(t, 3600)
@@ -12,14 +14,13 @@ def _dur(seconds: int) -> str:
     return _hms(float(seconds))[:8]
 
 
-def build_vmap(job_id: str, breaks: list[dict], ad_seconds: int, creative_base_url: str) -> str:
+def build_vmap(job_id: str, breaks: list[dict], ad_seconds: int, creative_base_url: str, owner_id: int | None = None) -> str:
     out = ['<?xml version="1.0" encoding="UTF-8"?>',
            '<vmap:VMAP xmlns:vmap="http://www.iab.net/videosuite/vmap" version="1.0">']
     live = [b for b in breaks if b.get("status", "placed") == "placed"]
     for i, b in enumerate(live, 1):
         brand = b["brand"]
-        creative = brand.get("creative", {})
-        media = creative.get("video_url") or f"{creative_base_url}/{brand['id']}.mp4"
+        media = brand.get("creative_url") or creative_url(brand, owner_id)
         bid = f"break-{i}"
         out.append(f'  <vmap:AdBreak timeOffset="{_hms(b["time"])}" breakType="linear" breakId="{bid}">')
         out.append(f'    <vmap:AdSource id="{bid}-src" allowMultipleAds="false" followRedirects="true">')

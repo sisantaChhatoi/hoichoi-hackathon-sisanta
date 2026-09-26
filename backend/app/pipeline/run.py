@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .. import config, store
 from . import audio, gemini, judge, matching, scoring, vmap
+from .creatives import creative_url
 
 
 def _logger(job_id: str):
@@ -49,7 +50,7 @@ def analyze(job_id: str, video_path: str) -> dict:
 
 
 def place(job_id: str, analysis: dict, catalogue: dict, pacing: dict, creative_base_url: str,
-          use_llm: bool = True, video_path: str | None = None, use_judge: bool = True) -> dict:
+          use_llm: bool = True, video_path: str | None = None, use_judge: bool = True, owner_id: int | None = None) -> dict:
     """Cheap half: scoring, pacing, brand matching, judge, VMAP. Re-runnable in seconds
     (e.g. after adding a 9th brand or changing pacing)."""
     log = _logger(job_id)
@@ -122,9 +123,10 @@ def place(job_id: str, analysis: dict, catalogue: dict, pacing: dict, creative_b
         p["review_reason"] = doubt
 
     for p in placed:
+        p["brand"]["creative_url"] = creative_url(p["brand"], owner_id)
         log(f"break @{p['time']:.1f}s → {p['brand']['name']} ({p['match_method']}, {p['status']})"
             + (f" · judge: cut={p['judge']['cut_verdict']} brand={p['judge']['brand_verdict']}" if p.get("judge") else ""))
-    xml = vmap.build_vmap(job_id, placed, pacing["ad_duration_seconds"], creative_base_url)
+    xml = vmap.build_vmap(job_id, placed, pacing["ad_duration_seconds"], creative_base_url, owner_id)
     return {
         "pacing": pacing,
         "candidates": cands,
@@ -142,7 +144,7 @@ def run_job(job_id: str, video_path: str, pacing: dict | None = None, owner_id: 
         store.update(job_id, analysis=analysis)
         store.set_progress(job_id, "placement", 85, "Scoring breaks and matching brands")
         result = place(job_id, analysis, matching.load_brands(owner_id), {**config.DEFAULT_PACING, **(pacing or {})},
-                       config.CREATIVE_BASE_URL, video_path=video_path)
+                       config.CREATIVE_BASE_URL, video_path=video_path, owner_id=owner_id)
         store.update(job_id, result=result, status="done", stage="done", progress=100, message="")
         _free_local_copy(job_id, video_path)
     except Exception as e:
@@ -168,7 +170,7 @@ def review_reason(p: dict) -> str | None:
     return "; ".join(doubts) or None
 
 
-def apply_decision(result: dict, break_id: str, action: str, ad_seconds: int, job_id: str, creative_base_url: str) -> dict:
+def apply_decision(result: dict, break_id: str, action: str, ad_seconds: int, job_id: str, creative_base_url: str, owner_id: int | None = None) -> dict:
     """User approves a break under review, or removes any break. Rebuilds the manifest."""
     breaks = result["breaks"]
     target = next((b for b in breaks if b["id"] == break_id), None)
@@ -183,7 +185,7 @@ def apply_decision(result: dict, break_id: str, action: str, ad_seconds: int, jo
                                                   "rejected_because": "removed by you"})
     else:
         raise ValueError(action)
-    result["vmap"] = vmap.build_vmap(job_id, result["breaks"], ad_seconds, creative_base_url)
+    result["vmap"] = vmap.build_vmap(job_id, result["breaks"], ad_seconds, creative_base_url, owner_id)
     return result
 
 

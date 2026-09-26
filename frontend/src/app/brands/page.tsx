@@ -123,6 +123,9 @@ export default function Brands() {
             <Field label="Additional rule" id="rule" hint="Anything else the brand should never appear next to">
               <Textarea id="rule" placeholder="e.g. never after a scene where food is wasted" value={b.negative_description} onChange={(e) => setB({ ...b, negative_description: e.target.value })} />
             </Field>
+            <Field label="Creative video URL" id="cvid" hint="Optional — an MP4 to play as this brand's ad. Without it, a card in the brand's colours is generated.">
+              <Input id="cvid" placeholder="https://…/ad.mp4" value={b.creative?.video_url ?? ""} onChange={(e) => setB({ ...b, creative: { ...b.creative, video_url: e.target.value || undefined } })} />
+            </Field>
             <div className="flex items-center gap-4">
               <Label>Creative colours</Label>
               <label className="flex items-center gap-2 text-sm text-muted-foreground">Background
@@ -203,7 +206,7 @@ function BrandDialog({ brand, onClose }: { brand: Brand | null; onClose: () => v
           <>
             <div className="aspect-video w-full overflow-hidden rounded-t-lg" style={{ background: b.creative?.bg, color: b.creative?.fg }}>
               {!noVideo ? (
-                <video key={b.id} src={b.creative?.video_url ?? `/creatives/${b.id}.mp4`} autoPlay muted loop playsInline className="h-full w-full object-cover" onError={() => setNoVideo(true)} />
+                <video key={b.id} src={b.creative_url ?? b.creative?.video_url ?? `/creatives/${b.id}.mp4`} autoPlay muted loop playsInline className="h-full w-full object-cover" onError={() => setNoVideo(true)} />
               ) : (
                 <div className="flex h-full flex-col items-center justify-center p-6 text-center">
                   <div className="text-3xl font-extrabold">{b.name}</div>

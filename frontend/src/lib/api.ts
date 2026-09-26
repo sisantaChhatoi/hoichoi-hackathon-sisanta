@@ -6,7 +6,7 @@ export type Brand = {
   id: string; name: string; category?: string; tagline?: string;
   target_contexts: string[]; negative_contexts: string[]; negative_description?: string;
   creative?: { bg?: string; fg?: string; video_url?: string; image_url?: string };
-  category_tag?: string;
+  category_tag?: string; creative_url?: string;
 };
 export type Scene = {
   id: string; start: number; end: number; title: string; summary: string; setting?: string;

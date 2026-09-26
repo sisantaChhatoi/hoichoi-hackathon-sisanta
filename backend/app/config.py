@@ -37,6 +37,8 @@ SHOT_DETECT = os.environ.get("SHOT_DETECT", "1") == "1"
 BRANDS_FILE = Path(__file__).resolve().parent.parent / "data" / "brands.json"
 # Where the generated ad creatives (frontend/public/creatives/<brand_id>.mp4) are served from
 CREATIVE_BASE_URL = os.environ.get("CREATIVE_BASE_URL", "http://localhost:3000/creatives").rstrip("/")
+# This API's own public URL (for creatives rendered on the server). Render provides RENDER_EXTERNAL_URL.
+PUBLIC_API_URL = (os.environ.get("PUBLIC_API_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "http://localhost:8000").rstrip("/")
 
 # Pacing rules ("whether" a break is warranted at all). Overridable per job.
 DEFAULT_PACING = {

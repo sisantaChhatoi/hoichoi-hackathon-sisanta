@@ -9,12 +9,12 @@ from pathlib import Path
 import httpx
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import auth, config, store
-from .pipeline import matching, run
+from .pipeline import creatives, matching, run
 from .vocab import CATEGORY_TAGS, CONTEXT_TAGS, MOODS
 
 
@@ -86,9 +86,25 @@ def me(user: dict = auth.CurrentUser):
 
 
 # ------------------------------------------------------------------ brands
+def _with_urls(cat: dict, owner_id: int) -> dict:
+    for b in cat["brands"]:
+        b["creative_url"] = creatives.creative_url(b, owner_id)
+    return cat
+
+
 @app.get("/brands")
 def brands(user: dict = auth.CurrentUser):
-    return matching.load_brands(user["id"])
+    return _with_urls(matching.load_brands(user["id"]), user["id"])
+
+
+@app.get("/creatives/{owner_id}/{brand_id}.mp4")
+def creative(owner_id: int, brand_id: str):
+    """Rendered on first request for brands that don't ship with a creative."""
+    cat = matching.load_brands(owner_id)
+    brand = next((b for b in cat["brands"] if b["id"] == brand_id), None)
+    if not brand:
+        raise HTTPException(404)
+    return FileResponse(creatives.ensure_creative(brand), media_type="video/mp4")
 
 
 class Brand(BaseModel):
@@ -111,12 +127,12 @@ def add_brand(brand: Brand, user: dict = auth.CurrentUser):
         raise HTTPException(400, f"unknown context tags: {bad}. See GET /vocab")
     if brand.category_tag and brand.category_tag not in CATEGORY_TAGS:
         raise HTTPException(400, f"unknown category: {brand.category_tag}")
-    return matching.add_brand(user["id"], brand.model_dump())
+    return _with_urls(matching.add_brand(user["id"], brand.model_dump()), user["id"])
 
 
 @app.delete("/brands/{brand_id}")
 def delete_brand(brand_id: str, user: dict = auth.CurrentUser):
-    return matching.delete_brand(user["id"], brand_id)
+    return _with_urls(matching.delete_brand(user["id"], brand_id), user["id"])
 
 
 # -------------------------------------------------------------------- jobs
@@ -245,7 +261,7 @@ def replace(job_id: str, body: Replace, user: dict = auth.CurrentUser):
     pacing = {**config.DEFAULT_PACING, **(body.pacing or {})}
     video = _local_video_path(job_id)
     result = run.place(job_id, j["analysis"], matching.load_brands(user["id"]), pacing, config.CREATIVE_BASE_URL,
-                       use_llm=body.use_llm, video_path=str(video) if video.exists() else None, use_judge=body.use_judge)
+                       use_llm=body.use_llm, video_path=str(video) if video.exists() else None, use_judge=body.use_judge, owner_id=user["id"])
     store.update(job_id, result=result)
     return job(job_id, user=user)
 
@@ -261,7 +277,7 @@ def decide_break(job_id: str, break_id: str, body: Decision, user: dict = auth.C
     if not j.get("result"):
         raise HTTPException(404, "no placement yet")
     try:
-        result = run.apply_decision(j["result"], break_id, body.action, j["result"]["pacing"]["ad_duration_seconds"], job_id, config.CREATIVE_BASE_URL)
+        result = run.apply_decision(j["result"], break_id, body.action, j["result"]["pacing"]["ad_duration_seconds"], job_id, config.CREATIVE_BASE_URL, user["id"])
     except KeyError:
         raise HTTPException(404, "unknown break")
     except ValueError:

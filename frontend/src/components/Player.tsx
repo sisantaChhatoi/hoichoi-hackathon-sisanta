@@ -68,7 +68,7 @@ export default function Player({ src, breaks, adSeconds, duration, seekTo }:
   }, [ad]);
 
   const c = ad?.brand.creative ?? {};
-  const adSrc = ad ? (c.video_url ?? `/creatives/${ad.brand.id}.mp4`) : "";
+  const adSrc = ad ? (ad.brand.creative_url ?? c.video_url ?? `/creatives/${ad.brand.id}.mp4`) : "";
   const pct = (x: number) => `${(x / duration) * 100}%`;
 
   return (
