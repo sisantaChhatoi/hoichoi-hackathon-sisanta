@@ -89,7 +89,7 @@ export default function Home() {
             {file ? (
               <><span className="font-medium">{file.name}</span><span className="text-xs text-muted-foreground">{(file.size / 1e6).toFixed(0)} MB</span></>
             ) : (
-              <><span>Drag a video here, or browse</span><span className="text-xs text-muted-foreground">MP4 · a 25-minute episode takes about four minutes</span></>
+              <><span>Drag a video here, or browse</span><span className="text-xs text-muted-foreground">MP4 · a 25-minute episode takes about two minutes</span></>
             )}
             <input ref={fileInput} type="file" accept="video/mp4,video/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </div>

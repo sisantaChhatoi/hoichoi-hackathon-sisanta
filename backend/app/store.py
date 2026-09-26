@@ -202,12 +202,12 @@ def set_progress(job_id: str, stage: str, pct: float, msg: str = "") -> None:
 
 def _eta(job: dict, pct: float) -> int | None:
     """Seconds remaining. Before we know the video length it is unknown; then a
-    duration-based estimate (~9 s per content minute + fixed overhead), refined by
+    duration-based estimate (~3 s per content minute + fixed overhead), refined by
     the observed rate once the run is well under way."""
     duration = job.get("duration")
     if not duration:
         return None
-    expected_total = 45 + 9 * duration / 60
+    expected_total = 60 + 3 * duration / 60
     est = expected_total * (1 - pct / 100)
     started = job.get("started_at") or job.get("created_at")
     if started and pct >= 20:
