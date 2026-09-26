@@ -41,6 +41,7 @@ Auto-DQ: hard-coded timestamps/brands, ANY negative-context violation on held-ou
 - Prod timing: 23-min episode ≈ 3.5 min (silence 30s, Gemini upload 30s, 5 chunks 2 min, match+judge 40s).
 - Seeded prod jobs: mohanagar `514cf6c8442d`, bhojon `7483fadeae21`, money_honey `05b838d99310` (videos in Vercel Blob `episodes/`).
 - Keep-alive: `.github/workflows/keepalive.yml` pings /health every 10 min.
+- Auth: JWT (HS256, 7d) — set JWT_SECRET on Render; tables users/jobs.owner_id/brands are per user; the old public-sample concept is gone. Local user account: sisanta__.
 
 ## Working style
 - Be token-frugal: no re-reading files already in context, small targeted edits, no long file dumps.

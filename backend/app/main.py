@@ -20,6 +20,7 @@ from .vocab import CONTEXT_TAGS, MOODS
 def _resume_interrupted():
     """A restart (deploy, free-tier recycle) kills in-flight background jobs. Re-queue any
     job left 'running'/'queued' whose video is still fetchable; otherwise mark it as an error."""
+    print("migration:", store.migrate_once())
     for j in store.list_jobs_all():
         if j.get("status") not in ("running", "queued"):
             continue
@@ -74,14 +75,14 @@ def login(body: Credentials):
 
 
 @app.get("/auth/me")
-def me(user: str = auth.CurrentUser):
-    return {"username": user}
+def me(user: dict = auth.CurrentUser):
+    return {"username": user["username"]}
 
 
 # ------------------------------------------------------------------ brands
 @app.get("/brands")
-def brands(user: str = auth.CurrentUser):
-    return matching.load_brands(user)
+def brands(user: dict = auth.CurrentUser):
+    return matching.load_brands(user["id"])
 
 
 class Brand(BaseModel):
@@ -96,29 +97,24 @@ class Brand(BaseModel):
 
 
 @app.post("/brands")
-def add_brand(brand: Brand, user: str = auth.CurrentUser):
+def add_brand(brand: Brand, user: dict = auth.CurrentUser):
     """Add a (9th, unseen) brand to the caller's catalogue. Re-run placement on a job to see it matched."""
     bad = [t for t in brand.target_contexts + brand.negative_contexts if t not in CONTEXT_TAGS]
     if bad:
         raise HTTPException(400, f"unknown context tags: {bad}. See GET /vocab")
-    cat = matching.load_brands(user)
-    cat["brands"] = [b for b in cat["brands"] if b["id"] != brand.id] + [brand.model_dump()]
-    matching.save_brands(user, cat)
-    return cat
+    return matching.add_brand(user["id"], brand.model_dump())
 
 
 @app.delete("/brands/{brand_id}")
-def delete_brand(brand_id: str, user: str = auth.CurrentUser):
-    cat = matching.load_brands(user)
-    cat["brands"] = [b for b in cat["brands"] if b["id"] != brand_id]
-    matching.save_brands(user, cat)
-    return cat
+def delete_brand(brand_id: str, user: dict = auth.CurrentUser):
+    return matching.delete_brand(user["id"], brand_id)
 
 
 # -------------------------------------------------------------------- jobs
-def _new_job(title: str, video_url: str | None, owner: str) -> dict:
-    job = {"id": uuid.uuid4().hex[:12], "title": title, "owner": owner, "status": "queued", "stage": "queued",
-           "progress": 0, "message": "", "created_at": time.time(), "video_url": video_url, "log": []}
+def _new_job(title: str, video_url: str | None, user: dict) -> dict:
+    job = {"id": uuid.uuid4().hex[:12], "title": title, "owner": user["username"], "owner_id": user["id"],
+           "status": "queued", "stage": "queued", "progress": 0, "message": "", "created_at": time.time(),
+           "video_url": video_url, "log": []}
     store.save_job(job)
     return job
 
@@ -127,23 +123,23 @@ def _local_video_path(job_id: str) -> Path:
     return config.MEDIA_DIR / f"{job_id}.mp4"
 
 
-def _load(job_id: str, user: str | None, edit: bool = False) -> dict:
+def _load(job_id: str, user: dict, edit: bool = False) -> dict:
     j = store.get_job(job_id)
     if not j or not store.can_view(j, user):
         raise HTTPException(404)
     if edit and not store.can_edit(j, user):
-        raise HTTPException(403, "this episode is a shared sample")
+        raise HTTPException(403, "you do not own this episode")
     return j
 
 
 @app.post("/jobs/upload")
-async def create_job_upload(bg: BackgroundTasks, file: UploadFile = File(...), title: str = Form(""), user: str = auth.CurrentUser):
+async def create_job_upload(bg: BackgroundTasks, file: UploadFile = File(...), title: str = Form(""), user: dict = auth.CurrentUser):
     job = _new_job(title or file.filename or "untitled", None, user)
     dest = _local_video_path(job["id"])
     with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
     store.update(job["id"], video_url=f"/media/{dest.name}")
-    bg.add_task(run.run_job, job["id"], str(dest), None, user)
+    bg.add_task(run.run_job, job["id"], str(dest), None, user["id"])
     return store.get_job(job["id"])
 
 
@@ -155,7 +151,7 @@ class JobFromUrl(BaseModel):
 
 def _download_and_run(job_id: str, url: str, pacing: dict | None):
     dest = _local_video_path(job_id)
-    owner = (store.get_job(job_id) or {}).get("owner")
+    owner_id = (store.get_job(job_id) or {}).get("owner_id")
     try:
         store.set_progress(job_id, "download", 1, "Downloading video")
         with httpx.stream("GET", url, follow_redirects=True, timeout=600) as r:
@@ -166,11 +162,11 @@ def _download_and_run(job_id: str, url: str, pacing: dict | None):
     except Exception as e:
         store.update(job_id, status="error", message=f"download failed: {e}"[:300])
         return
-    run.run_job(job_id, str(dest), pacing, owner)
+    run.run_job(job_id, str(dest), pacing, owner_id)
 
 
 @app.post("/jobs")
-def create_job_url(body: JobFromUrl, bg: BackgroundTasks, user: str = auth.CurrentUser):
+def create_job_url(body: JobFromUrl, bg: BackgroundTasks, user: dict = auth.CurrentUser):
     """Start a job from a video URL (e.g. the Blob URL the frontend uploaded to)."""
     job = _new_job(body.title or body.url.rsplit("/", 1)[-1], body.url, user)
     bg.add_task(_download_and_run, job["id"], body.url, body.pacing)
@@ -178,12 +174,12 @@ def create_job_url(body: JobFromUrl, bg: BackgroundTasks, user: str = auth.Curre
 
 
 @app.get("/jobs")
-def jobs(user: str = auth.CurrentUser):
-    return store.list_jobs(user)
+def jobs(user: dict = auth.CurrentUser):
+    return store.list_jobs(user["id"])
 
 
 @app.post("/jobs/{job_id}/retry")
-def retry_job(job_id: str, bg: BackgroundTasks, user: str = auth.CurrentUser):
+def retry_job(job_id: str, bg: BackgroundTasks, user: dict = auth.CurrentUser):
     """Re-run a failed/interrupted job from its stored video URL."""
     j = _load(job_id, user, edit=True)
     url = j.get("video_url") or ""
@@ -192,14 +188,14 @@ def retry_job(job_id: str, bg: BackgroundTasks, user: str = auth.CurrentUser):
     if url.startswith("http"):
         bg.add_task(_download_and_run, job_id, url, None)
     elif local.exists():
-        bg.add_task(run.run_job, job_id, str(local), None, user)
+        bg.add_task(run.run_job, job_id, str(local), None, user["id"])
     else:
         raise HTTPException(409, "video no longer available — upload again")
     return store.get_job(job_id)
 
 
 @app.delete("/jobs/{job_id}")
-def delete_job(job_id: str, user: str = auth.CurrentUser):
+def delete_job(job_id: str, user: dict = auth.CurrentUser):
     _load(job_id, user, edit=True)
     store.delete_job(job_id)
     p = _local_video_path(job_id)
@@ -209,7 +205,7 @@ def delete_job(job_id: str, user: str = auth.CurrentUser):
 
 
 @app.get("/jobs/{job_id}")
-def job(job_id: str, full: bool = False, user: str = auth.CurrentUser):
+def job(job_id: str, full: bool = False, user: dict = auth.CurrentUser):
     j = _load(job_id, user)
     j["editable"] = store.can_edit(j, user)
     if not full:
@@ -231,26 +227,21 @@ class Replace(BaseModel):
 
 
 @app.post("/jobs/{job_id}/place")
-def replace(job_id: str, body: Replace, user: str = auth.CurrentUser):
-    """Re-run scoring + matching only (seconds). Use after adding a brand or changing pacing.
-    Works on shared samples too, using the caller's catalogue, without persisting."""
-    j = _load(job_id, user)
+def replace(job_id: str, body: Replace, user: dict = auth.CurrentUser):
+    """Re-run scoring + matching only (seconds). Use after adding a brand or changing pacing."""
+    j = _load(job_id, user, edit=True)
     if not j.get("analysis"):
         raise HTTPException(404, "job has no analysis yet")
     pacing = {**config.DEFAULT_PACING, **(body.pacing or {})}
     video = _local_video_path(job_id)
-    result = run.place(job_id, j["analysis"], matching.load_brands(user), pacing, config.CREATIVE_BASE_URL,
+    result = run.place(job_id, j["analysis"], matching.load_brands(user["id"]), pacing, config.CREATIVE_BASE_URL,
                        use_llm=body.use_llm, video_path=str(video) if video.exists() else None, use_judge=body.use_judge)
-    if store.can_edit(j, user):
-        store.update(job_id, result=result)
-        return job(job_id, user=user)
-    j["result"] = result
-    j["editable"] = False
-    return {k: v for k, v in j.items() if k != "analysis"} | {"analysis": _analysis_summary(j.get("analysis"))}
+    store.update(job_id, result=result)
+    return job(job_id, user=user)
 
 
 @app.get("/jobs/{job_id}/vmap.xml")
-def vmap_xml(job_id: str, user: str = auth.CurrentUser):
+def vmap_xml(job_id: str, user: dict = auth.CurrentUser):
     j = _load(job_id, user)
     if not j.get("result"):
         raise HTTPException(404)
@@ -259,7 +250,7 @@ def vmap_xml(job_id: str, user: str = auth.CurrentUser):
 
 
 @app.get("/jobs/{job_id}/debug.json")
-def debug_json(job_id: str, user: str = auth.CurrentUser):
+def debug_json(job_id: str, user: dict = auth.CurrentUser):
     j = _load(job_id, user)
     if not j.get("result"):
         raise HTTPException(404)

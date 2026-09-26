@@ -27,6 +27,12 @@ episode.mp4 ─┬─ ffmpeg: silence map + shot cuts (precise, local, cheap)
           VMAP 1.0 + inline VAST 3.0 (+ <Extension> with cutSafety/scenes/rationale) · debug.json · player
 ```
 
+## Accounts
+
+Sign up with a username and password (unique usernames, scrypt-hashed); sign-in returns a JWT bearer token
+(7-day expiry). Everything — episodes, analyses, placements, brand catalogue — is private per user.
+Postgres tables: `users`, `jobs(owner_id fk)`, `brands(owner_id fk)`.
+
 **Generalises to unseen brands with zero code changes**: scene tags come from a controlled vocabulary
 (`backend/app/vocab.py`) that Gemini is schema-forced to use, and brands declare `target_contexts` /
 `negative_contexts` from the same vocabulary. Add a brand in the UI (`/brands`) or `POST /brands`, then
@@ -72,6 +78,9 @@ cd frontend && pnpm install && pnpm dev                          # http://localh
 
 | Method | Path | Purpose |
 |---|---|---|
+| POST | `/auth/signup` `{username,password}` | create an account, returns a JWT |
+| POST | `/auth/login` `{username,password}` | sign in, returns a JWT |
+| GET | `/auth/me` | current user |
 | POST | `/jobs` `{url,title}` | analyse a video by URL |
 | POST | `/jobs/upload` (multipart) | analyse an uploaded file |
 | GET | `/jobs/{id}` | status, scenes, breaks, rejected candidates |
@@ -79,3 +88,5 @@ cd frontend && pnpm install && pnpm dev                          # http://localh
 | GET | `/jobs/{id}/vmap.xml` · `/jobs/{id}/debug.json` | outputs |
 | GET/POST/DELETE | `/brands` | synthetic catalogue (add the 9th brand here) |
 | GET | `/vocab` | context tag vocabulary |
+
+All `/jobs` and `/brands` routes require `Authorization: Bearer <token>`.

@@ -33,7 +33,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
     <div className="mx-auto flex min-h-[70vh] w-full max-w-sm flex-col justify-center">
       <div className="rise rise-1 mb-8 flex items-center gap-2">
         <Clapperboard className="size-5" strokeWidth={1.75} />
-        <span className="font-brand text-[22px] font-semibold leading-none tracking-tight">Cuepoint</span>
+        <span className="font-serif text-2xl leading-none">Cuepoint</span>
       </div>
       <h1 className="rise rise-2 text-3xl">{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
       <p className="rise rise-2 mt-2 text-sm text-muted-foreground">

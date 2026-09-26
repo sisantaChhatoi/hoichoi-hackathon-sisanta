@@ -19,7 +19,7 @@ export function Nav() {
       <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-8 px-5 lg:px-6">
         <Link href="/" className="flex items-center gap-2">
           <Clapperboard className="size-5" strokeWidth={1.75} />
-          <span className="font-brand text-[22px] font-semibold leading-none tracking-tight">Cuepoint</span>
+          <span className="font-serif text-2xl leading-none">Cuepoint</span>
         </Link>
         <nav className="ml-auto flex h-14 items-stretch gap-6 text-sm">
           {links.map((l) => {

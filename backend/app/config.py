@@ -21,6 +21,9 @@ JWT_SECRET = os.environ.get("JWT_SECRET") or hashlib.sha256(("cuepoint:" + os.en
 # Postgres DSN (Supabase → Connect → Session/Transaction pooler URI). Empty = local-only persistence.
 SUPABASE_DB_URL = os.environ.get("SUPABASE_DB_URL", "")
 
+# One-time migration: ownerless jobs (pre-auth "samples") are assigned to this username, if it exists.
+MIGRATE_OWNER = os.environ.get("MIGRATE_OWNER", "sisanta__")
+
 DATA_DIR = Path(os.environ.get("DATA_DIR", "./data_local")).resolve()
 CACHE_DIR = DATA_DIR / "cache"
 JOBS_DIR = DATA_DIR / "jobs"

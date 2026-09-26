@@ -38,19 +38,31 @@ def default_catalogue() -> dict:
     return json.loads(config.BRANDS_FILE.read_text())
 
 
-def load_brands(owner: str | None = None) -> dict:
-    """A user's catalogue (seeded from the default set on first use); the default set for public jobs."""
+def load_brands(owner_id: int | None) -> dict:
+    """A user's catalogue: {"brands": [rows for that user, insertion order], "fallback": ...}.
+    Seeded from the default set (data/brands.json) on first access for a user with zero rows.
+    owner_id=None (local dev scripts only, never an API path) gets the default catalogue as-is."""
+    if owner_id is None:
+        return default_catalogue()
     from .. import store
-    if owner:
-        cat = store.get_doc("catalogue", owner)
-        if cat:
-            return cat
-    return default_catalogue()
+    rows = store.get_brand_rows(owner_id)
+    if not rows:
+        for b in default_catalogue()["brands"]:
+            store.upsert_brand(owner_id, b)
+        rows = store.get_brand_rows(owner_id)
+    return {"brands": rows, "fallback": default_catalogue().get("fallback")}
 
 
-def save_brands(owner: str, catalogue: dict) -> None:
+def add_brand(owner_id: int, brand: dict) -> dict:
     from .. import store
-    store.put_doc("catalogue", owner, catalogue)
+    store.upsert_brand(owner_id, brand)
+    return load_brands(owner_id)
+
+
+def delete_brand(owner_id: int, brand_id: str) -> dict:
+    from .. import store
+    store.delete_brand_row(owner_id, brand_id)
+    return load_brands(owner_id)
 
 
 def _ctx_tags(scene_before: dict, scene_after: dict) -> tuple[set, set]:

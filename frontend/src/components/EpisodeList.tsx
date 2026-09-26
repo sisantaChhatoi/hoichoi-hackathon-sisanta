@@ -34,7 +34,7 @@ export function EpisodeList({ jobs, limit, onRemoved }: { jobs: Job[]; limit?: n
             <TableRow key={j.id} className="group">
               <TableCell className="pl-0">
                 <Link href={`/jobs/${j.id}`} className="inline-flex items-center gap-1.5 font-medium hover:underline">
-                  {j.title}{j.editable === false && <span className="ml-1 text-xs font-normal text-muted-foreground">sample</span>}<ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+                  {j.title}<ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
                 </Link>
               </TableCell>
               <TableCell className="font-mono text-xs text-muted-foreground">{j.duration ? fmt(j.duration) : "—"}</TableCell>
@@ -42,7 +42,7 @@ export function EpisodeList({ jobs, limit, onRemoved }: { jobs: Job[]; limit?: n
               <TableCell className="text-xs text-muted-foreground">{when(j.created_at)}</TableCell>
               <TableCell><Status job={j} /></TableCell>
               <TableCell className="pr-0 text-right">
-                {j.editable !== false && <Button variant="ghost" size="icon" aria-label="Remove" className="opacity-0 transition group-hover:opacity-100" onClick={() => setPending(j)}><Trash2 /></Button>}
+                <Button variant="ghost" size="icon" aria-label="Remove" className="opacity-0 transition group-hover:opacity-100" onClick={() => setPending(j)}><Trash2 /></Button>
               </TableCell>
             </TableRow>
           ))}

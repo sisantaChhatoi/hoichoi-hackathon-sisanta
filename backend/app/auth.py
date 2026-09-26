@@ -1,8 +1,7 @@
 """Minimal multi-tenant auth: username + password, HS256 JWTs, 7-day expiry.
-Users and per-user brand catalogues are stored as documents (see store.get_doc)."""
+Users are rows in public.users (see store.get_user / store.create_user)."""
 import hashlib
 import hmac
-import os
 import re
 import secrets
 import time
@@ -34,28 +33,28 @@ def signup(username: str, password: str) -> str:
         raise HTTPException(400, "Username must be 3–32 characters: letters, numbers, dots, dashes or underscores.")
     if len(password) < 8:
         raise HTTPException(400, "Password must be at least 8 characters.")
-    if store.get_doc("user", username):
+    if store.get_user(username):
         raise HTTPException(409, "That username is taken.")
-    store.put_doc("user", username, {"username": username, "password": _hash(password), "created_at": time.time()})
-    return issue(username)
+    uid = store.create_user(username, _hash(password))
+    return issue(username, uid)
 
 
 def login(username: str, password: str) -> str:
     username = username.strip().lower()
-    user = store.get_doc("user", username)
-    if not user or not _verify(password, user["password"]):
+    user = store.get_user(username)
+    if not user or not _verify(password, user["password_hash"]):
         raise HTTPException(401, "Wrong username or password.")
-    return issue(username)
+    return issue(username, user["id"])
 
 
-def issue(username: str) -> str:
+def issue(username: str, uid: int) -> str:
     now = int(time.time())
-    return jwt.encode({"sub": username, "iat": now, "exp": now + TOKEN_TTL}, config.JWT_SECRET, algorithm="HS256")
+    return jwt.encode({"sub": username, "uid": uid, "iat": now, "exp": now + TOKEN_TTL}, config.JWT_SECRET, algorithm="HS256")
 
 
-def decode(token: str) -> str:
+def decode(token: str) -> dict:
     try:
-        return jwt.decode(token, config.JWT_SECRET, algorithms=["HS256"])["sub"]
+        return jwt.decode(token, config.JWT_SECRET, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         raise HTTPException(401, "expired")
     except jwt.PyJWTError:
@@ -69,17 +68,18 @@ def _token_from(request: Request) -> str | None:
     return request.query_params.get("token")  # links opened in a new tab can't send headers
 
 
-def current_user(request: Request) -> str:
+def current_user(request: Request) -> dict:
+    """{"id": int, "username": str}. Re-checks the user still exists (cheap PK select)
+    so a deleted user is logged out even with an unexpired token."""
     token = _token_from(request)
     if not token:
         raise HTTPException(401, "not signed in")
-    return decode(token)
-
-
-def optional_user(request: Request) -> str | None:
-    token = _token_from(request)
-    return decode(token) if token else None
+    payload = decode(token)
+    uid = payload.get("uid")
+    user = store.get_user_by_id(uid) if uid is not None else None
+    if not user:
+        raise HTTPException(401, "invalid token")
+    return user
 
 
 CurrentUser = Depends(current_user)
-OptionalUser = Depends(optional_user)
