@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 toast: "!rounded-lg !border !border-border !bg-card !text-foreground !shadow-[var(--shadow-float)] !p-4 !gap-3 font-sans !pr-9 [&_[data-icon]]:!size-7 [&_[data-icon]]:!shrink-0",
                 title: "!text-sm !font-medium",
                 description: "!text-sm !text-muted-foreground",
-                actionButton: "!h-8 !rounded-md !bg-foreground !px-3 !text-sm !font-medium !text-background",
+                actionButton: "!h-8 !rounded-md !bg-secondary !px-3 !text-sm !font-medium !text-foreground hover:!bg-accent",
                 closeButton: "!size-6 !rounded-none !border-0 !bg-transparent !shadow-none !text-muted-foreground hover:!bg-transparent hover:!text-foreground",
               },
             }} />
