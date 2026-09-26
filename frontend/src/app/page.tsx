@@ -58,16 +58,16 @@ export default function Home() {
 
   return (
     <div className="space-y-14">
-      <section className="grid items-center gap-12 py-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-14">
+      <section className="grid items-center gap-12 py-6 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-16">
         <div className="space-y-8">
           <div className="space-y-4">
             <h1 className="text-4xl leading-tight">Ad breaks that respect the story</h1>
-            <p className="max-w-xl text-muted-foreground">
+            <p className="max-w-2xl text-muted-foreground">
               Cuepoint watches an episode the way an editor would, then places every break where it belongs and explains why.
               The result is a VMAP manifest, a decision report, and a preview you can play right here.
             </p>
           </div>
-          <ul className="max-w-xl space-y-4">
+          <ul className="max-w-2xl space-y-4">
             {POINTS.map(([k, v]) => (
               <li key={k} className="grid grid-cols-[84px_1fr] gap-3 text-sm">
                 <span className="pt-0.5 font-mono text-xs uppercase tracking-wide text-muted-foreground">{k}</span>
