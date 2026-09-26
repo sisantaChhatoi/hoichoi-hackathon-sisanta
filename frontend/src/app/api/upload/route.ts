@@ -24,5 +24,8 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  return Response.json({ enabled: !!process.env.BLOB_READ_WRITE_TOKEN });
+  return Response.json({
+    enabled: !!process.env.BLOB_READ_WRITE_TOKEN,
+    blob_vars: Object.keys(process.env).filter((k) => k.startsWith("BLOB_")), // names only, for diagnostics
+  });
 }
