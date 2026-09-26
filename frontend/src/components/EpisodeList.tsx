@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { deleteFromBlob } from "@/lib/blob";
 
 const when = (ts: number) =>
   new Date(ts * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -57,9 +58,9 @@ export function EpisodeList({ jobs, limit, onRemoved }: { jobs: Job[] | null; li
         </div>
       )}
       <ConfirmDialog open={!!pending} title={`Remove "${pending?.title}"?`}
-        description="The analysis and placements for this episode will be deleted. The video file is kept."
+        description="The analysis, placements and the uploaded video will be deleted."
         onClose={() => setPending(null)}
-        onConfirm={() => { if (pending) api.deleteJob(pending.id).then(() => onRemoved(pending.id)); }} />
+        onConfirm={() => { if (pending) api.deleteJob(pending.id).then(() => { onRemoved(pending.id); deleteFromBlob(pending.video_url); }); }} />
     </>
   );
 }

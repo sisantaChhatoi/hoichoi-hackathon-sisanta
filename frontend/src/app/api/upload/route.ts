@@ -1,5 +1,5 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { list } from "@vercel/blob";
+import { del, list } from "@vercel/blob";
 
 const STORE_LIMIT = 1024 * 1024 * 1024; // Hobby plan: exceeding it disables Blob for 30 days
 const HEADROOM = 40 * 1024 * 1024;
@@ -39,4 +39,16 @@ export async function GET() {
     enabled: !!process.env.BLOB_READ_WRITE_TOKEN,
     blob_vars: Object.keys(process.env).filter((k) => k.startsWith("BLOB_")), // names only, for diagnostics
   });
+}
+
+/** Remove an episode's video from the store once its job is deleted. */
+export async function DELETE(request: Request) {
+  try {
+    const { url } = (await request.json()) as { url?: string };
+    if (!url || !/\.public\.blob\.vercel-storage\.com\/episodes\//.test(url)) return Response.json({ ok: false }, { status: 400 });
+    await del(url);
+    return Response.json({ ok: true });
+  } catch (e) {
+    return Response.json({ error: String(e) }, { status: 400 });
+  }
 }
