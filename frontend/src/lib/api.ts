@@ -41,6 +41,7 @@ export const api = {
     const fd = new FormData(); fd.append("file", file); fd.append("title", title);
     return fetch(`${API}/jobs/upload`, { method: "POST", body: fd }).then(j<Job>);
   },
+  retry: (id: string) => fetch(`${API}/jobs/${id}/retry`, { method: "POST" }).then(j<Job>),
   deleteJob: (id: string) => fetch(`${API}/jobs/${id}`, { method: "DELETE" }).then(j<{ ok: boolean }>),
   place: (id: string, pacing?: Record<string, number>) =>
     fetch(`${API}/jobs/${id}/place`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pacing }) }).then(j<Job>),

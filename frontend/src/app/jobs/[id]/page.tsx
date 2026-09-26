@@ -46,7 +46,13 @@ export default function JobPage() {
 
       {job.status !== "done" && (
         <div className="panel p-4">
-          <div className="flex justify-between text-sm mb-2"><span>{job.message || job.stage}</span><span>{job.progress ?? 0}%</span></div>
+          <div className="flex justify-between text-sm mb-2 gap-3">
+            <span>{job.message || job.stage}</span>
+            <span className="flex items-center gap-3">
+              {job.status === "error" && <button className="btn-ghost !py-0.5 !px-2 text-xs" onClick={() => api.retry(id).then(setJob).catch((e) => setErr(String(e)))}>Retry</button>}
+              {job.progress ?? 0}%
+            </span>
+          </div>
           <div className="h-2 rounded bg-[var(--line)] overflow-hidden"><div className="h-full" style={{ width: `${job.progress ?? 0}%`, background: job.status === "error" ? "var(--bad)" : "var(--accent)" }} /></div>
           <pre className="mt-3 text-xs muted max-h-48 overflow-auto whitespace-pre-wrap">{(job.log ?? []).slice(-15).join("\n")}</pre>
         </div>

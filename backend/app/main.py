@@ -1,7 +1,9 @@
 import json
 import shutil
+import threading
 import time
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
@@ -15,7 +17,29 @@ from . import config, store
 from .pipeline import matching, run
 from .vocab import CONTEXT_TAGS, MOODS
 
-app = FastAPI(title="hoichoi contextual ad-break API")
+def _resume_interrupted():
+    """A restart (deploy, free-tier recycle) kills in-flight background jobs. Re-queue any
+    job left 'running'/'queued' whose video is still fetchable; otherwise mark it as an error."""
+    import threading
+    for j in store.list_jobs():
+        if j.get("status") not in ("running", "queued"):
+            continue
+        url = j.get("video_url") or ""
+        if url.startswith("http"):
+            print("resuming interrupted job", j["id"])
+            store.update(j["id"], status="queued", stage="queued", progress=0, message="resumed after server restart")
+            threading.Thread(target=_download_and_run, args=(j["id"], url, None), daemon=True).start()
+        else:
+            store.update(j["id"], status="error", message="interrupted by a server restart and the uploaded file is gone — please upload again")
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    threading.Thread(target=_resume_interrupted, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="hoichoi contextual ad-break API", lifespan=_lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS + ["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/media", StaticFiles(directory=str(config.MEDIA_DIR), follow_symlink=True), name="media")
 
@@ -124,6 +148,24 @@ def create_job_url(body: JobFromUrl, bg: BackgroundTasks):
 @app.get("/jobs")
 def jobs():
     return store.list_jobs()
+
+
+@app.post("/jobs/{job_id}/retry")
+def retry_job(job_id: str, bg: BackgroundTasks):
+    """Re-run a failed/interrupted job from its stored video URL."""
+    j = store.get_job(job_id)
+    if not j:
+        raise HTTPException(404)
+    url = j.get("video_url") or ""
+    local = _local_video_path(job_id)
+    store.update(job_id, status="queued", stage="queued", progress=0, message="", log=[])
+    if url.startswith("http"):
+        bg.add_task(_download_and_run, job_id, url, None)
+    elif local.exists():
+        bg.add_task(run.run_job, job_id, str(local))
+    else:
+        raise HTTPException(409, "video no longer available — upload again")
+    return store.get_job(job_id)
 
 
 @app.delete("/jobs/{job_id}")
