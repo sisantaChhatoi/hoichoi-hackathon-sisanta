@@ -1,3 +1,4 @@
+import json
 import shutil
 import threading
 import time
@@ -28,7 +29,7 @@ def _resume_interrupted():
         if url.startswith("http"):
             print("resuming interrupted job", j["id"])
             store.update(j["id"], status="queued", stage="queued", progress=0, message="resumed after server restart")
-            threading.Thread(target=_download_and_run, args=(j["id"], url, None), daemon=True).start()
+            threading.Thread(target=_download_and_run, args=(j["id"], url, j.get("pacing")), daemon=True).start()
         else:
             store.update(j["id"], status="error", message="interrupted by a server restart and the uploaded file is gone — please upload again")
 
@@ -49,6 +50,11 @@ def health():
     from .pipeline import judge
     return {"ok": True, "models": config.GEMINI_MODELS, "text_models": config.GEMINI_TEXT_MODELS,
             "judge": judge.provider(), "db": bool(config.SUPABASE_DB_URL)}
+
+
+@app.get("/pacing")
+def pacing_defaults():
+    return config.DEFAULT_PACING
 
 
 @app.get("/vocab")
@@ -111,8 +117,8 @@ def delete_brand(brand_id: str, user: dict = auth.CurrentUser):
 
 
 # -------------------------------------------------------------------- jobs
-def _new_job(title: str, video_url: str | None, user: dict) -> dict:
-    job = {"id": uuid.uuid4().hex[:12], "title": title, "owner": user["username"], "owner_id": user["id"],
+def _new_job(title: str, video_url: str | None, user: dict, pacing: dict | None = None) -> dict:
+    job = {"id": uuid.uuid4().hex[:12], "title": title, "owner": user["username"], "owner_id": user["id"], "pacing": pacing,
            "status": "queued", "stage": "queued", "progress": 0, "message": "", "created_at": time.time(),
            "video_url": video_url, "log": []}
     store.save_job(job)
@@ -133,13 +139,14 @@ def _load(job_id: str, user: dict, edit: bool = False) -> dict:
 
 
 @app.post("/jobs/upload")
-async def create_job_upload(bg: BackgroundTasks, file: UploadFile = File(...), title: str = Form(""), user: dict = auth.CurrentUser):
-    job = _new_job(title or file.filename or "untitled", None, user)
+async def create_job_upload(bg: BackgroundTasks, file: UploadFile = File(...), title: str = Form(""), pacing: str = Form(""), user: dict = auth.CurrentUser):
+    rules = json.loads(pacing) if pacing else None
+    job = _new_job(title or file.filename or "untitled", None, user, rules)
     dest = _local_video_path(job["id"])
     with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
     store.update(job["id"], video_url=f"/media/{dest.name}")
-    bg.add_task(run.run_job, job["id"], str(dest), None, user["id"])
+    bg.add_task(run.run_job, job["id"], str(dest), rules, user["id"])
     return store.get_job(job["id"])
 
 
@@ -168,7 +175,7 @@ def _download_and_run(job_id: str, url: str, pacing: dict | None):
 @app.post("/jobs")
 def create_job_url(body: JobFromUrl, bg: BackgroundTasks, user: dict = auth.CurrentUser):
     """Start a job from a video URL (e.g. the Blob URL the frontend uploaded to)."""
-    job = _new_job(body.title or body.url.rsplit("/", 1)[-1], body.url, user)
+    job = _new_job(body.title or body.url.rsplit("/", 1)[-1], body.url, user, body.pacing)
     bg.add_task(_download_and_run, job["id"], body.url, body.pacing)
     return job
 
@@ -186,9 +193,9 @@ def retry_job(job_id: str, bg: BackgroundTasks, user: dict = auth.CurrentUser):
     local = _local_video_path(job_id)
     store.update(job_id, status="queued", stage="queued", progress=0, message="", log=[])
     if url.startswith("http"):
-        bg.add_task(_download_and_run, job_id, url, None)
+        bg.add_task(_download_and_run, job_id, url, j.get("pacing"))
     elif local.exists():
-        bg.add_task(run.run_job, job_id, str(local), None, user["id"])
+        bg.add_task(run.run_job, job_id, str(local), j.get("pacing"), user["id"])
     else:
         raise HTTPException(409, "video no longer available — upload again")
     return store.get_job(job_id)

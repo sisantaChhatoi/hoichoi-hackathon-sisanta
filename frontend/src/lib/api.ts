@@ -64,9 +64,10 @@ export const api = {
   me: () => call("/auth/me").then(j<{ username: string }>),
   jobs: () => call("/jobs").then(j<Job[]>),
   job: (id: string) => call(`/jobs/${id}`).then(j<Job>),
-  createFromUrl: (url: string, title: string) => call("/jobs", { method: "POST" }, { url, title }).then(j<Job>),
-  upload: (file: File, title: string) => {
-    const fd = new FormData(); fd.append("file", file); fd.append("title", title);
+  pacingDefaults: () => call("/pacing").then(j<Record<string, number>>),
+  createFromUrl: (url: string, title: string, pacing?: Record<string, number>) => call("/jobs", { method: "POST" }, { url, title, pacing }).then(j<Job>),
+  upload: (file: File, title: string, pacing?: Record<string, number>) => {
+    const fd = new FormData(); fd.append("file", file); fd.append("title", title); if (pacing) fd.append("pacing", JSON.stringify(pacing));
     return call("/jobs/upload", { method: "POST", body: fd }).then(j<Job>);
   },
   decide: (id: string, breakId: string, action: "approve" | "remove") => call(`/jobs/${id}/breaks/${breakId}`, { method: "POST" }, { action }).then(j<Job>),

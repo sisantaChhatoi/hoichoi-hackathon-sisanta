@@ -8,18 +8,9 @@ import Player from "@/components/Player";
 import Timeline from "@/components/Timeline";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Slider } from "@/components/ui/slider";
+import { PacingControls } from "@/components/PacingControls";
 import { cn } from "cn";
-
-const PACING: { key: string; label: string; min: number; max: number; step: number; unit?: string }[] = [
-  { key: "max_breaks_per_hour", label: "Breaks per hour", min: 1, max: 12, step: 1 },
-  { key: "min_gap_seconds", label: "Minimum gap", min: 60, max: 900, step: 30, unit: "s" },
-  { key: "max_ad_load_pct", label: "Ad load", min: 2, max: 25, step: 1, unit: "%" },
-  { key: "ad_duration_seconds", label: "Ad length", min: 10, max: 60, step: 5, unit: "s" },
-  { key: "min_cut_safety", label: "Minimum cut safety", min: 0.3, max: 0.9, step: 0.05 },
-];
 
 const sectionLabel = "text-xs font-medium uppercase tracking-wide text-muted-foreground";
 
@@ -200,18 +191,7 @@ export default function JobPage() {
               <p className={sectionLabel}>Pacing rules</p>
               <p className="text-sm text-muted-foreground">Whether a break is warranted. Re-placing reuses the analysis and takes seconds.</p>
             </div>
-            <div className="space-y-5">
-              {PACING.map((f) => (
-                <div key={f.key} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label>{f.label}</Label>
-                    <span className="font-mono text-sm text-muted-foreground">{p[f.key]}{f.unit ?? ""}</span>
-                  </div>
-                  <Slider min={f.min} max={f.max} step={f.step} value={[p[f.key] ?? f.min]}
-                    onValueChange={(v) => setPacing({ ...pacing, [f.key]: Array.isArray(v) ? v[0] : v })} />
-                </div>
-              ))}
-            </div>
+            <PacingControls value={p} onChange={(v) => setPacing({ ...pacing, ...v })} />
             <Button className="w-full" onClick={replace} disabled={busy}><RefreshCw data-icon="inline-start" className={busy ? "animate-spin" : ""} /> {busy ? "Re-placing…" : "Re-run placement"}</Button>
           </aside>
         </div>
