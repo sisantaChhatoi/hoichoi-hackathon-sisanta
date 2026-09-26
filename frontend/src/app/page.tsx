@@ -52,8 +52,16 @@ export default function Home() {
       if (file) {
         if (await blobUploadsEnabled()) {
           setBusy("Uploading…");
-          const publicUrl = await uploadToBlob(file, (p) => setBusy(`Uploading ${p}%`));
-          job = await api.createFromUrl(publicUrl, name, rules);
+          try {
+            const publicUrl = await uploadToBlob(file, (p) => setBusy(`Uploading ${p}%`));
+            job = await api.createFromUrl(publicUrl, name, rules);
+          } catch (e) {
+            if (!String(e).includes("Not enough storage")) throw e;
+            // Storage is full: fall back to a direct upload. Works for this session; the video is not kept across server restarts.
+            setBusy("Storage full — uploading directly…");
+            job = await api.upload(file, name, rules);
+            setErr("Cloud storage is full, so this video was stored on the server temporarily. Free some space by removing an episode.");
+          }
         } else {
           setBusy("Uploading…");
           job = await api.upload(file, name, rules);
