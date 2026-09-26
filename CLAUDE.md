@@ -34,6 +34,14 @@ Auto-DQ: hard-coded timestamps/brands, ANY negative-context violation on held-ou
 - Paid Gemini key (AIza…) in `backend/.env`; Pro available. All 6 samples analysed locally in `backend/data_local` (~4–5 min each).
 - Deploy: Render blueprint `render.yaml` (Docker, SHOT_DETECT=0), Vercel root `frontend/`, `frontend/scripts/seed.mjs` pre-seeds demo jobs.
 
+## Live deployment (26 Sep 2026)
+- Frontend: https://hoichoi-hackathon-sisanta.vercel.app (Vercel, root `frontend/`, env `NEXT_PUBLIC_API_URL`, `BLOB_READ_WRITE_TOKEN` added manually — the store connection only added `BLOB_STORE_ID`).
+- Backend: https://hoichoi-hackathon-sisanta.onrender.com (Render free, Docker). Any env change/deploy restarts the container and kills
+  in-flight jobs → `_resume_interrupted()` on startup re-queues them from the Blob URL. **No deploys during judging.**
+- Prod timing: 23-min episode ≈ 3.5 min (silence 30s, Gemini upload 30s, 5 chunks 2 min, match+judge 40s).
+- Seeded prod jobs: mohanagar `514cf6c8442d`, bhojon `7483fadeae21`, money_honey `05b838d99310` (videos in Vercel Blob `episodes/`).
+- Keep-alive: `.github/workflows/keepalive.yml` pings /health every 10 min.
+
 ## Working style
 - Be token-frugal: no re-reading files already in context, small targeted edits, no long file dumps.
 - Never print the API key. `.env` files are gitignored.
