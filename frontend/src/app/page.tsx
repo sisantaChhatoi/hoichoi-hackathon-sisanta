@@ -58,16 +58,16 @@ export default function Home() {
 
   return (
     <div className="space-y-14">
-      <section className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-20">
-        <div className="space-y-6">
-          <div className="space-y-3">
+      <section className="grid items-center gap-12 py-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-14">
+        <div className="space-y-8">
+          <div className="space-y-4">
             <h1 className="text-4xl leading-tight">Ad breaks that respect the story</h1>
             <p className="max-w-xl text-muted-foreground">
               Cuepoint watches an episode the way an editor would, then places every break where it belongs and explains why.
               The result is a VMAP manifest, a decision report, and a preview you can play right here.
             </p>
           </div>
-          <ul className="max-w-xl space-y-3">
+          <ul className="max-w-xl space-y-4">
             {POINTS.map(([k, v]) => (
               <li key={k} className="grid grid-cols-[84px_1fr] gap-3 text-sm">
                 <span className="pt-0.5 font-mono text-xs uppercase tracking-wide text-muted-foreground">{k}</span>
@@ -77,13 +77,13 @@ export default function Home() {
           </ul>
         </div>
 
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-5">
           <div
             onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
             onDragLeave={() => setDrag(false)}
             onDrop={(e) => { e.preventDefault(); setDrag(false); setFile(e.dataTransfer.files?.[0] ?? null); }}
             onClick={() => fileInput.current?.click()}
-            className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-9 text-center text-sm transition-colors",
+            className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-12 text-center text-sm transition-colors",
               drag ? "border-foreground bg-accent/60" : "hover:bg-accent/40")}>
             <Upload className="size-5 text-muted-foreground" />
             {file ? (
@@ -93,15 +93,15 @@ export default function Home() {
             )}
             <input ref={fileInput} type="file" accept="video/mp4,video/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor="title">Title</Label>
             <Input id="title" placeholder="Episode title" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor="url">Video URL</Label>
             <Input id="url" placeholder="Paste a video link" value={url} onChange={(e) => setUrl(e.target.value)} disabled={!!file} />
           </div>
-          <Button type="submit" className="w-full" disabled={!!busy || (!file && !url)}>
+          <Button type="submit" size="lg" className="w-full" disabled={!!busy || (!file && !url)}>
             {busy ?? <>Analyse episode <ArrowRight data-icon="inline-end" /></>}
           </Button>
           {err && <p className="text-sm text-destructive">{err}</p>}
