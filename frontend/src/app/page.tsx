@@ -62,7 +62,7 @@ export default function Home() {
         </p>
       </section>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <div className="grid items-start gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
         <div className="surface h-fit space-y-4 p-6">
           <div className="space-y-1">
             <h2 className="font-semibold">New episode</h2>
