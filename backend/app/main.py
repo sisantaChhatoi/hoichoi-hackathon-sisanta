@@ -17,7 +17,7 @@ from .vocab import CONTEXT_TAGS, MOODS
 
 app = FastAPI(title="hoichoi contextual ad-break API")
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS + ["*"], allow_methods=["*"], allow_headers=["*"])
-app.mount("/media", StaticFiles(directory=str(config.MEDIA_DIR)), name="media")
+app.mount("/media", StaticFiles(directory=str(config.MEDIA_DIR), follow_symlink=True), name="media")
 
 
 @app.get("/health")
