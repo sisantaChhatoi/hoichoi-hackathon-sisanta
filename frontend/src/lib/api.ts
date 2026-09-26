@@ -6,11 +6,13 @@ export type Brand = {
   id: string; name: string; category?: string; tagline?: string;
   target_contexts: string[]; negative_contexts: string[]; negative_description?: string;
   creative?: { bg?: string; fg?: string; video_url?: string; image_url?: string };
+  category_tag?: string;
 };
 export type Scene = {
   id: string; start: number; end: number; title: string; summary: string; setting?: string;
   dominant_activity: string; tags: string[]; mood: string; sensitive: boolean;
   ends_on_cliffhanger?: boolean; boundary_quality: number;
+  promotion?: { brand: string; categories: string[] } | null;
 };
 export type Candidate = {
   id: string; time: number; anchor_time: number; source: string; scene_before: string; scene_after: string;
@@ -22,6 +24,7 @@ export type Break = Candidate & {
   brand_rows: { brand_id: string; blocked_by: string[]; affinity: number }[];
   judge?: Verdict;
   status?: "placed" | "review"; review_reason?: string | null; approved?: boolean;
+  promotions_nearby?: { brand: string; categories: string[]; scene: string }[];
 };
 export type Job = {
   id: string; title: string; status: "queued" | "running" | "done" | "error"; stage?: string; progress?: number;
@@ -77,7 +80,7 @@ export const api = {
   brands: () => call("/brands").then(j<{ brands: Brand[]; fallback: Brand }>),
   addBrand: (b: Brand) => call("/brands", { method: "POST" }, b).then(j<{ brands: Brand[] }>),
   deleteBrand: (id: string) => call(`/brands/${id}`, { method: "DELETE" }).then(j<{ brands: Brand[] }>),
-  vocab: () => call("/vocab").then(j<{ tags: string[]; moods: string[] }>),
+  vocab: () => call("/vocab").then(j<{ tags: string[]; moods: string[]; categories: string[] }>),
 };
 
 export const mediaUrl = (u?: string | null) => (!u ? "" : u.startsWith("http") ? u : `${API}${u}`);

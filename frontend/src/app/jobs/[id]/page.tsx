@@ -144,6 +144,10 @@ export default function JobPage() {
                         <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-[130px_1fr]">
                           <dt className="text-muted-foreground">Why this cut</dt><dd>{b.reasons.join(" · ")}</dd>
                           <dt className="text-muted-foreground">Selection</dt><dd>{matchLabel[b.match_method] ?? b.match_method}</dd>
+                          {b.promotions_nearby && b.promotions_nearby.length > 0 && (<>
+                            <dt className="text-muted-foreground">In-content promotion nearby</dt>
+                            <dd>{b.promotions_nearby.map((p) => `${p.brand} (${p.categories.join(", ")})`).join("; ")} — competing brands were kept out of this slot</dd>
+                          </>)}
                           {blocked.length > 0 && (<>
                             <dt className="text-muted-foreground">Blocked here</dt>
                             <dd>{blocked.map((x) => `${x.brand_id} (${x.blocked_by.map(blockLabel).join(", ")})`).join(", ")}</dd>

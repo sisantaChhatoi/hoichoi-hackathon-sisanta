@@ -103,7 +103,9 @@ def _build_items(video_path: str | None, breaks: list[dict], scenes_by_id: dict)
             f"Scene after: {after['title']} — {after['summary']} [activity: {after['dominant_activity']}; tags: {', '.join(after['tags'])}; mood: {after['mood']}; sensitive: {after['sensitive']}]\n"
             f"Matched brand: {brand['name']} ({brand.get('category','')}) — tagline '{brand.get('tagline','')}'. "
             f"Negative contexts: {', '.join(brand.get('negative_contexts', [])) or 'none'}. Rule: {brand.get('negative_description') or 'none'}. "
-            f"Matcher rationale: {b.get('rationale','')}"))
+            f"Matcher rationale: {b.get('rationale','')}"
+            + (f"\nIn-content promotions nearby: " + "; ".join(f"{p.get('brand')} ({', '.join(p.get('categories', []))})" for p in b.get("promotions_nearby", []))
+               + " — a brand competing with these is a violation." if b.get("promotions_nearby") else "")))
         if video_path and os.path.exists(video_path):
             for label, t in (("just before the cut", b["time"] - 1.5), ("just after the cut", b["time"] + 1.5)):
                 img = _frame_b64(video_path, t)

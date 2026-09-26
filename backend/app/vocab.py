@@ -23,4 +23,10 @@ CONTEXT_TAGS = [
 
 MOODS = ["joyful", "warm", "neutral", "romantic", "tense", "suspenseful", "sad", "grim", "comic", "dramatic"]
 
+# Product categories, shared by brands and by in-content promotions Gemini spots
+# (sponsor segments, product placement, on-screen ads). A brand is never placed
+# next to a scene promoting something in its own category.
+CATEGORY_TAGS = ["food", "beverage", "tea", "jewellery", "vehicle", "finance", "education", "skincare",
+                 "fashion", "travel", "telecom", "electronics", "household", "health", "entertainment", "real-estate", "other"]
+
 TAG_SET = set(CONTEXT_TAGS)

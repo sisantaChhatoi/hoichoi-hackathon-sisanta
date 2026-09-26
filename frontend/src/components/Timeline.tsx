@@ -35,6 +35,7 @@ export default function Timeline({ scenes, breaks, candidates, duration, onSeek 
                 {hover.mood}
               </span>
               {hover.sensitive && <span className="text-xs font-medium text-destructive">Sensitive</span>}
+              {hover.promotion && <span className="text-xs font-medium text-warning">Promotes {hover.promotion.brand}</span>}
             </div>
             <p className="text-muted-foreground">{hover.summary}</p>
             <div className="flex flex-wrap gap-1">{hover.tags.map((t) => <Badge key={t} variant="outline">{t}</Badge>)}</div>

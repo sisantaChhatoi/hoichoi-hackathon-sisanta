@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from . import auth, config, store
 from .pipeline import matching, run
-from .vocab import CONTEXT_TAGS, MOODS
+from .vocab import CATEGORY_TAGS, CONTEXT_TAGS, MOODS
 
 
 def _resume_interrupted():
@@ -59,7 +59,7 @@ def pacing_defaults():
 
 @app.get("/vocab")
 def vocab():
-    return {"tags": CONTEXT_TAGS, "moods": MOODS}
+    return {"tags": CONTEXT_TAGS, "moods": MOODS, "categories": CATEGORY_TAGS}
 
 
 # -------------------------------------------------------------------- auth
@@ -100,6 +100,7 @@ class Brand(BaseModel):
     negative_contexts: list[str] = []
     negative_description: str = ""
     creative: dict = {}
+    category_tag: str = ""
 
 
 @app.post("/brands")
@@ -108,6 +109,8 @@ def add_brand(brand: Brand, user: dict = auth.CurrentUser):
     bad = [t for t in brand.target_contexts + brand.negative_contexts if t not in CONTEXT_TAGS]
     if bad:
         raise HTTPException(400, f"unknown context tags: {bad}. See GET /vocab")
+    if brand.category_tag and brand.category_tag not in CATEGORY_TAGS:
+        raise HTTPException(400, f"unknown category: {brand.category_tag}")
     return matching.add_brand(user["id"], brand.model_dump())
 
 

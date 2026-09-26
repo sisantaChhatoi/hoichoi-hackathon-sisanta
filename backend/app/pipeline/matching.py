@@ -34,6 +34,14 @@ RANK_SCHEMA = {
 }
 
 
+def _backfill(brand: dict) -> dict:
+    """Brands saved before category tags existed inherit the default one by id."""
+    if not brand.get("category_tag"):
+        d = next((b for b in default_catalogue()["brands"] if b["id"] == brand["id"]), None)
+        brand["category_tag"] = d["category_tag"] if d else ""
+    return brand
+
+
 def default_catalogue() -> dict:
     return json.loads(config.BRANDS_FILE.read_text())
 
@@ -50,7 +58,7 @@ def load_brands(owner_id: int | None) -> dict:
         for b in default_catalogue()["brands"]:
             store.upsert_brand(owner_id, b)
         rows = store.get_brand_rows(owner_id)
-    return {"brands": rows, "fallback": default_catalogue().get("fallback")}
+    return {"brands": [_backfill(r) for r in rows], "fallback": default_catalogue().get("fallback")}
 
 
 def add_brand(owner_id: int, brand: dict) -> dict:
@@ -75,6 +83,27 @@ def hard_block(brand: dict, before_tags: set, after_tags: set) -> list[str]:
     return hits
 
 
+PROMO_WINDOW = 180.0  # seconds either side of the cut in which an in-content promotion counts
+
+
+def promotions_near(cut: float, scenes: list[dict]) -> list[dict]:
+    """In-content promotions in scenes overlapping the window around a cut."""
+    out = []
+    for s in scenes:
+        p = s.get("promotion")
+        if p and s["end"] >= cut - PROMO_WINDOW and s["start"] <= cut + PROMO_WINDOW:
+            out.append({**p, "scene": s["id"]})
+    return out
+
+
+def promo_conflict(brand: dict, promos: list[dict]) -> str | None:
+    tag = brand.get("category_tag")
+    for p in promos:
+        if tag and tag in p.get("categories", []):
+            return f"in-content promotion of {p.get('brand') or 'a competitor'}"
+    return None
+
+
 def affinity(brand: dict, before: dict, after: dict) -> float:
     tgt = set(brand.get("target_contexts", []))
     if not tgt:
@@ -94,16 +123,22 @@ def match(breaks: list[dict], scenes_by_id: dict, catalogue: dict, log=print, us
     brands = catalogue["brands"]
     fallback = catalogue.get("fallback")
     exclusions = exclusions or {}
+    all_scenes = sorted(scenes_by_id.values(), key=lambda s: s["start"])
     per_break = []
     for br in breaks:
         before, after = scenes_by_id[br["scene_before"]], scenes_by_id[br["scene_after"]]
         bt, at = _ctx_tags(before, after)
+        promos = promotions_near(br["time"], all_scenes)
         rows = []
         for b in brands:
             hits = hard_block(b, bt, at)
+            conflict = promo_conflict(b, promos)
+            if conflict:
+                hits = hits + [conflict]
             if b["id"] in exclusions.get(br["id"], {}):
                 hits = hits + [exclusions[br["id"]][b["id"]]]
             rows.append({"brand_id": b["id"], "blocked_by": hits, "affinity": affinity(b, before, after)})
+        br["promotions_nearby"] = promos
         allowed = [r for r in rows if not r["blocked_by"]]
         per_break.append({"break": br, "before": before, "after": after, "rows": rows, "allowed": allowed})
 
@@ -124,13 +159,15 @@ def match(breaks: list[dict], scenes_by_id: dict, catalogue: dict, log=print, us
                     for b in brands if b["id"] in allowed_ids
                 ],
                 "tag_affinity": {r["brand_id"]: r["affinity"] for r in pb["allowed"]},
+                "in_content_promotions_nearby": [{"brand": p.get("brand"), "categories": p.get("categories")} for p in pb["break"].get("promotions_nearby", [])],
             })
         prompt = (
             "You are placing ads inside a Bengali drama. For each ad slot, choose the ONE brand from allowed_brands whose creative "
             "fits most naturally with what the viewer has just watched (scene_before dominates; scene_after matters a little). "
             "The dominant scene activity wins over incidental details. tag_affinity is a hint, not a rule.\n"
             "First, for each slot, list in `conflicts` every allowed brand whose own negative_description would be violated by "
-            "this slot — be strict and conservative; a food ad after a funeral or illness is never acceptable. Never choose a conflicting brand.\n"
+            "this slot — be strict and conservative; a food ad after a funeral or illness is never acceptable. Also treat as a conflict any brand that "
+            "competes with an in-content promotion nearby (in_content_promotions_nearby): the content is already advertising that category. Never choose a conflicting brand.\n"
             "Prefer variety across slots: do not pick the same brand for adjacent slots unless it is clearly the only good fit.\n"
             "Write a one-sentence rationale in English that cites the specific scene content.\n\n"
             f"SLOTS:\n{json.dumps(slots, ensure_ascii=False)}"

@@ -12,7 +12,8 @@
       "fg": "hex",
       "video_url": "optional mp4",
       "image_url": "optional"
-    }
+    },
+    "category_tag": "one of app/vocab.py CATEGORY_TAGS — blocked next to in-content promotions of the same category"
   },
   "brands": [
     {
@@ -41,7 +42,8 @@
       "creative": {
         "bg": "#7a3e1d",
         "fg": "#fff3e0"
-      }
+      },
+      "category_tag": "tea"
     },
     {
       "id": "shonar-tori-jewellers",
@@ -70,7 +72,8 @@
       "creative": {
         "bg": "#8a6d1f",
         "fg": "#fff8dc"
-      }
+      },
+      "category_tag": "jewellery"
     },
     {
       "id": "nabin-motors",
@@ -98,7 +101,8 @@
       "creative": {
         "bg": "#1f3a5f",
         "fg": "#e8f1ff"
-      }
+      },
+      "category_tag": "vehicle"
     },
     {
       "id": "ghorer-swad",
@@ -129,7 +133,8 @@
       "creative": {
         "bg": "#b23a2a",
         "fg": "#fff5f0"
-      }
+      },
+      "category_tag": "food"
     },
     {
       "id": "pathshala-app",
@@ -157,7 +162,8 @@
       "creative": {
         "bg": "#2d6a4f",
         "fg": "#e9fff3"
-      }
+      },
+      "category_tag": "education"
     },
     {
       "id": "takapay",
@@ -186,7 +192,8 @@
       "creative": {
         "bg": "#4b2c83",
         "fg": "#f3ecff"
-      }
+      },
+      "category_tag": "finance"
     },
     {
       "id": "sundari-ayurveda",
@@ -215,7 +222,8 @@
       "creative": {
         "bg": "#a0526d",
         "fg": "#fff0f5"
-      }
+      },
+      "category_tag": "skincare"
     },
     {
       "id": "bhromon-travels",
@@ -245,7 +253,8 @@
       "creative": {
         "bg": "#0f766e",
         "fg": "#e6fffb"
-      }
+      },
+      "category_tag": "travel"
     }
   ],
   "fallback": {
@@ -259,6 +268,7 @@
     "creative": {
       "bg": "#111111",
       "fg": "#ffffff"
-    }
+    },
+    "category_tag": "entertainment"
   }
 }

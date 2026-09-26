@@ -26,6 +26,7 @@ Auto-DQ: hard-coded timestamps/brands, ANY negative-context violation on held-ou
 - Samples: 6 episodes, 20–26 min, 960x540, in `~/Downloads`. bhojon_bilashi full run = ~5 min wall time.
 - ffmpeg 9: use `-fps_mode vfr` (not `-vsync`). Music beds defeat `silencedetect` → also use Gemini speech gaps as pauses.
 - Gemini speech passages are coarse/over-merged: a ≥1s ffmpeg silence overrides "inside speech".
+- Competitive separation: scenes carry `promotion` (brand + CATEGORY_TAGS); brands have `category_tag`; same-category brands are hard-blocked within ±180s (bhojon_bilashi promotes Sunrise Pure Spices → Ghorer Swad blocked).
 
 - Judge (`pipeline/judge.py`): provider = Anthropic key → Bedrock → **Gemini 3.1 Pro (what we use; user has no Anthropic API key)**.
   Vetoes jarring cuts (re-select) / brand violations (re-match), max 2 rounds; still-jarring breaks are dropped.

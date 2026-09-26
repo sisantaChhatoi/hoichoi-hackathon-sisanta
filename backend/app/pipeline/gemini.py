@@ -10,10 +10,10 @@ from pathlib import Path
 import httpx
 
 from .. import config
-from ..vocab import CONTEXT_TAGS, MOODS
+from ..vocab import CATEGORY_TAGS, CONTEXT_TAGS, MOODS
 
 BASE = "https://generativelanguage.googleapis.com"
-PROMPT_VERSION = "v4"
+PROMPT_VERSION = "v5"
 
 
 class GeminiError(RuntimeError):
@@ -150,6 +150,16 @@ SCENE_SCHEMA = {
                     "mood": {"type": "string", "enum": MOODS},
                     "sensitive": {"type": "boolean", "description": "death, grief, violence, illness, crime, intimacy or similar"},
                     "ends_on_cliffhanger": {"type": "boolean"},
+                    "promotion": {
+                        "type": "object",
+                        "description": "in-content advertising in this scene: a sponsor segment, product placement, a brand being praised or shown on purpose, an on-screen ad. Omit or present=false when none.",
+                        "properties": {
+                            "present": {"type": "boolean"},
+                            "brand": {"type": "string", "description": "the brand or product being promoted, as named/shown"},
+                            "categories": {"type": "array", "items": {"type": "string", "enum": CATEGORY_TAGS}},
+                        },
+                        "required": ["present"],
+                    },
                     "boundary_quality": {"type": "number", "description": "0-1: how natural a pause is the END of this scene (location/time change, fade, music sting = high; cut mid-conversation = low)"},
                 },
                 "required": ["start", "end", "title", "summary", "dominant_activity", "tags", "mood", "sensitive", "boundary_quality"],
@@ -187,6 +197,7 @@ You are watching ONE CHUNK of the episode: from {start_mmss} to {end_mmss} of th
 Tasks:
 1. Segment the chunk into semantically coherent SCENES (a change of location, time, participants or narrative beat). Typical scene length 30s-4min. Do not split a single continuous conversation.
 2. For each scene: title, 2-3 sentence summary (English), setting, the ONE dominant activity, tags (only from the allowed list; include every tag that genuinely applies, sensitive ones included), mood, sensitive flag, ends_on_cliffhanger, and boundary_quality (0-1) for how natural an interruption at the END of this scene would be for a viewer.
+2b. If a scene contains IN-CONTENT ADVERTISING — a sponsor's segment, product placement, a brand deliberately shown or praised, an on-screen ad — set promotion.present=true with the brand name and its product categories. Ad breaks must not place a competing brand next to it.
 3. List every continuous SPEECH passage (dialogue, narration, singing with lyrics) as start/end. Be precise: a gap of >1s of no speech ends a passage. This is used to avoid cutting mid-sentence, so accuracy matters more than completeness of short fragments.
 4. For any scene longer than ~2 minutes, list up to 3 PAUSE POINTS inside it where a viewer could tolerate an interruption (a topic shift in the conversation, a character walking away, a beat after a punchline, a lull with no speech). Never mid-sentence. Give each a quality 0-1.
 
@@ -228,6 +239,9 @@ def analyze_chunk(file: dict, start: float, end: float, log=print) -> dict:
             continue
         s["start"], s["end"] = round(min(s_start, end), 2), round(min(s_end, end), 2)
         s["tags"] = [t for t in s.get("tags", []) if t in set(CONTEXT_TAGS)]
+        promo = s.get("promotion") or {}
+        s["promotion"] = ({"brand": promo.get("brand", ""), "categories": [c for c in promo.get("categories", []) if c in CATEGORY_TAGS]}
+                          if promo.get("present") else None)
         scenes.append(s)
     speech = []
     for p in data.get("speech", []):

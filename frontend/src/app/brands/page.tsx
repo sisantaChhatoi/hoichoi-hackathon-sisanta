@@ -16,6 +16,7 @@ const empty: Brand = { id: "", name: "", category: "", tagline: "", target_conte
 export default function Brands() {
   const [brands, setBrands] = useState<Brand[] | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [b, setB] = useState<Brand>(empty);
   const [saving, setSaving] = useState(false);
@@ -24,7 +25,7 @@ export default function Brands() {
   const [pending, setPending] = useState<Brand | null>(null);
   useEffect(() => {
     api.brands().then((c) => setBrands(c.brands)).catch(() => setMsg("Couldn't reach the API — retrying…"));
-    api.vocab().then((v) => setTags(v.tags)).catch(() => {});
+    api.vocab().then((v) => { setTags(v.tags); setCategories(v.categories ?? []); }).catch(() => {});
     const t = setInterval(() => api.brands().then((c) => { setBrands(c.brands); setMsg((m) => (m.startsWith("Couldn't") ? "" : m)); }).catch(() => {}), 5000);
     return () => clearInterval(t);
   }, []);
@@ -108,6 +109,13 @@ export default function Brands() {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Name" id="name"><Input id="name" placeholder="Brand name" value={b.name} onChange={(e) => setB({ ...b, name: e.target.value })} required /></Field>
               <Field label="Category" id="cat"><Input id="cat" placeholder="e.g. Tea, Two-wheelers" value={b.category} onChange={(e) => setB({ ...b, category: e.target.value })} /></Field>
+              <Field label="Product category" id="ctag" hint="Kept apart from in-content promotions of the same kind" className="sm:col-span-2">
+                <select id="ctag" value={b.category_tag ?? ""} onChange={(e) => setB({ ...b, category_tag: e.target.value })}
+                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm">
+                  <option value="">Choose…</option>
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </Field>
               <Field label="Tagline" id="tag" className="sm:col-span-2"><Input id="tag" placeholder="Short tagline" value={b.tagline} onChange={(e) => setB({ ...b, tagline: e.target.value })} /></Field>
             </div>
             <TagPicker label="Target contexts" hint="moments that suit this brand" tags={tags} selected={b.target_contexts} onToggle={(t) => toggle("target_contexts", t)} tone="primary" />
@@ -211,6 +219,7 @@ function BrandDialog({ brand, onClose }: { brand: Brand | null; onClose: () => v
               <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[130px_1fr]">
                 <dt className="text-muted-foreground">Target contexts</dt><dd>{b.target_contexts.join(", ") || "—"}</dd>
                 <dt className="text-muted-foreground">Hard blocks</dt><dd className="text-destructive/80">{b.negative_contexts.join(", ") || "—"}</dd>
+                {b.category_tag && (<><dt className="text-muted-foreground">Product category</dt><dd>{b.category_tag}</dd></>)}
                 {b.negative_description && (<><dt className="text-muted-foreground">Additional rule</dt><dd>{b.negative_description}</dd></>)}
                 <dt className="text-muted-foreground">Creative</dt>
                 <dd className="flex items-center gap-2"><span className="size-4 rounded-sm border" style={{ background: b.creative?.bg }} /><span className="font-mono text-xs">{b.creative?.bg}</span><span className="size-4 rounded-sm border" style={{ background: b.creative?.fg }} /><span className="font-mono text-xs">{b.creative?.fg}</span></dd>
