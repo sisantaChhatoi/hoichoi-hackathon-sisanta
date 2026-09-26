@@ -49,7 +49,7 @@ export default function Brands() {
 
       {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
 
-      <div className="surface overflow-hidden">
+      <div className="overflow-hidden border-y">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">

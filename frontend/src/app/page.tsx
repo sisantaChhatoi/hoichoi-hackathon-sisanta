@@ -63,7 +63,7 @@ export default function Home() {
       </section>
 
       <div className="grid items-start gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
-        <div className="surface h-fit space-y-4 p-6">
+        <div className="h-fit space-y-4">
           <div className="space-y-1">
             <h2 className="font-semibold">New episode</h2>
             <p className="text-sm text-muted-foreground">MP4, any length. A 25-minute episode takes about four minutes.</p>
@@ -96,7 +96,7 @@ export default function Home() {
           </form>
         </div>
 
-        <div className="surface p-6">
+        <div>
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="font-semibold">Episodes</h2>
             <span className="text-sm text-muted-foreground">{jobs.length ? `${jobs.length} analysed or in progress` : "Nothing analysed yet"}</span>
