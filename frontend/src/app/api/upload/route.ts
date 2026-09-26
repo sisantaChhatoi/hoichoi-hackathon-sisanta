@@ -1,4 +1,8 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { list } from "@vercel/blob";
+
+const STORE_LIMIT = 1024 * 1024 * 1024; // Hobby plan: exceeding it disables Blob for 30 days
+const HEADROOM = 40 * 1024 * 1024;
 
 export const dynamic = "force-dynamic"; // never pre-render: the token check must run per request
 
@@ -10,11 +14,18 @@ export async function POST(request: Request) {
     const json = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async () => ({
+      onBeforeGenerateToken: async (_pathname, clientPayload) => {
+        const size = Number(clientPayload ?? 0);
+        const used = (await list({ limit: 1000 })).blobs.reduce((t, b) => t + b.size, 0);
+        if (size && used + size > STORE_LIMIT - HEADROOM) {
+          throw new Error(`Not enough storage for this file (${((STORE_LIMIT - used) / 1e6).toFixed(0)} MB free). Remove an episode first.`);
+        }
+        return {
         allowedContentTypes: ["video/mp4", "video/quicktime", "video/x-matroska", "video/webm"],
         maximumSizeInBytes: 800 * 1024 * 1024,
         addRandomSuffix: true,
-      }),
+        };
+      },
       onUploadCompleted: async () => {},
     });
     return Response.json(json);

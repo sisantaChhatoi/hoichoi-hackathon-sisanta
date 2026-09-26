@@ -1,6 +1,7 @@
 """Orchestration: video path → analysis → scored candidates → breaks → brands → judge → VMAP."""
 import time
 import traceback
+from pathlib import Path
 
 from .. import config, store
 from . import audio, gemini, judge, matching, scoring, vmap
@@ -143,6 +144,7 @@ def run_job(job_id: str, video_path: str, pacing: dict | None = None, owner_id: 
         result = place(job_id, analysis, matching.load_brands(owner_id), {**config.DEFAULT_PACING, **(pacing or {})},
                        config.CREATIVE_BASE_URL, video_path=video_path)
         store.update(job_id, result=result, status="done", stage="done", progress=100, message="")
+        _free_local_copy(job_id, video_path)
     except Exception as e:
         traceback.print_exc()
         store.update(job_id, status="error", message=f"{type(e).__name__}: {e}"[:500])
@@ -183,3 +185,15 @@ def apply_decision(result: dict, break_id: str, action: str, ad_seconds: int, jo
         raise ValueError(action)
     result["vmap"] = vmap.build_vmap(job_id, result["breaks"], ad_seconds, creative_base_url)
     return result
+
+
+def _free_local_copy(job_id: str, video_path: str) -> None:
+    """Server disk is small and ephemeral; once the job is done and the video is
+    reachable by URL, drop the local download. Local symlinks (dev samples) are kept."""
+    try:
+        job = store.get_job(job_id) or {}
+        p = Path(video_path)
+        if str(job.get("video_url", "")).startswith("http") and p.is_file() and not p.is_symlink():
+            p.unlink()
+    except Exception as e:
+        print("could not remove local copy:", e)

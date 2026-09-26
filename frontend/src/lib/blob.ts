@@ -10,6 +10,7 @@ export async function uploadToBlob(file: File, onProgress?: (pct: number) => voi
     access: "public",
     handleUploadUrl: "/api/upload",
     multipart: true,
+    clientPayload: String(file.size),
     onUploadProgress: (p) => onProgress?.(Math.round(p.percentage)),
   });
   return blob.url;
