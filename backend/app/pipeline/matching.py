@@ -34,8 +34,23 @@ RANK_SCHEMA = {
 }
 
 
-def load_brands(path: Path | None = None) -> dict:
-    return json.loads((path or config.BRANDS_FILE).read_text())
+def default_catalogue() -> dict:
+    return json.loads(config.BRANDS_FILE.read_text())
+
+
+def load_brands(owner: str | None = None) -> dict:
+    """A user's catalogue (seeded from the default set on first use); the default set for public jobs."""
+    from .. import store
+    if owner:
+        cat = store.get_doc("catalogue", owner)
+        if cat:
+            return cat
+    return default_catalogue()
+
+
+def save_brands(owner: str, catalogue: dict) -> None:
+    from .. import store
+    store.put_doc("catalogue", owner, catalogue)
 
 
 def _ctx_tags(scene_before: dict, scene_after: dict) -> tuple[set, set]:

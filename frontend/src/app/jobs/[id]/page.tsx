@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowRight, Check, ChevronDown, Download, FileJson, RefreshCw, ShieldCheck } from "lucide-react";
-import { API, api, Job, Scene, fmt, mediaUrl } from "@/lib/api";
+import { api, authedUrl, Job, Scene, fmt, mediaUrl } from "@/lib/api";
 import { STAGES, blockLabel, etaLabel, matchLabel, sourceLabel, stageLabel } from "@/lib/copy";
 import Player from "@/components/Player";
 import Timeline from "@/components/Timeline";
@@ -57,10 +57,10 @@ export default function JobPage() {
         {a && <span className="text-sm text-muted-foreground">{fmt(a.media.duration)} · {a.media.width}×{a.media.height}</span>}
         {r && (
           <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" nativeButton={false} render={<a href={`${API}/jobs/${id}/vmap.xml`} target="_blank" rel="noreferrer" />}>
+            <Button variant="outline" size="sm" nativeButton={false} render={<a href={authedUrl(`/jobs/${id}/vmap.xml`)} target="_blank" rel="noreferrer" />}>
               <Download data-icon="inline-start" /> VMAP manifest
             </Button>
-            <Button variant="outline" size="sm" nativeButton={false} render={<a href={`${API}/jobs/${id}/debug.json`} target="_blank" rel="noreferrer" />}>
+            <Button variant="outline" size="sm" nativeButton={false} render={<a href={authedUrl(`/jobs/${id}/debug.json`)} target="_blank" rel="noreferrer" />}>
               <FileJson data-icon="inline-start" /> Decision report
             </Button>
           </div>

@@ -1,3 +1,5 @@
+import { getToken, signOutTo } from "@/lib/auth";
+
 export const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type Brand = {
@@ -22,34 +24,57 @@ export type Break = Candidate & {
 };
 export type Job = {
   id: string; title: string; status: "queued" | "running" | "done" | "error"; stage?: string; progress?: number;
-  message?: string; created_at: number; video_url?: string | null; log?: string[];
+  message?: string; created_at: number; video_url?: string | null; log?: string[]; owner?: string | null; editable?: boolean;
   duration?: number | null; breaks?: number | null; eta_seconds?: number | null;
   analysis?: { media: { duration: number; width: number; height: number }; scenes: Scene[]; speech: { start: number; end: number }[]; silence_count: number; shot_cut_count: number } | null;
   result?: { pacing: Record<string, number>; candidates: Candidate[]; rejected: Candidate[]; breaks: Break[]; vmap: string;
     judge?: (Verdict & { round: number; brand_id: string; time: number })[] } | null;
 };
 
+class ApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
 async function j<T>(r: Response): Promise<T> {
-  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+  if (!r.ok) {
+    let msg = `${r.status}`;
+    try { const d = await r.json(); msg = d.detail ?? JSON.stringify(d); } catch {}
+    if (r.status === 401 && !r.url.includes("/auth/")) signOutTo(!!getToken());
+    throw new ApiError(r.status, msg);
+  }
   return r.json();
 }
+
+/** Authenticated fetch: bearer token from the session, JSON body helper. */
+function call(path: string, init: RequestInit = {}, body?: unknown) {
+  const headers: Record<string, string> = { ...(init.headers as Record<string, string> ?? {}) };
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  return fetch(`${API}${path}`, { cache: "no-store", ...init, headers, body: body !== undefined ? JSON.stringify(body) : init.body });
+}
+
+/** For links opened in a new tab (they cannot carry headers). */
+export const authedUrl = (path: string) => `${API}${path}?token=${encodeURIComponent(getToken() ?? "")}`;
+
 export const api = {
-  jobs: () => fetch(`${API}/jobs`, { cache: "no-store" }).then(j<Job[]>),
-  job: (id: string) => fetch(`${API}/jobs/${id}`, { cache: "no-store" }).then(j<Job>),
-  createFromUrl: (url: string, title: string) =>
-    fetch(`${API}/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url, title }) }).then(j<Job>),
+  signup: (username: string, password: string) => call("/auth/signup", { method: "POST" }, { username, password }).then(j<{ token: string; username: string }>),
+  login: (username: string, password: string) => call("/auth/login", { method: "POST" }, { username, password }).then(j<{ token: string; username: string }>),
+  me: () => call("/auth/me").then(j<{ username: string }>),
+  jobs: () => call("/jobs").then(j<Job[]>),
+  job: (id: string) => call(`/jobs/${id}`).then(j<Job>),
+  createFromUrl: (url: string, title: string) => call("/jobs", { method: "POST" }, { url, title }).then(j<Job>),
   upload: (file: File, title: string) => {
     const fd = new FormData(); fd.append("file", file); fd.append("title", title);
-    return fetch(`${API}/jobs/upload`, { method: "POST", body: fd }).then(j<Job>);
+    return call("/jobs/upload", { method: "POST", body: fd }).then(j<Job>);
   },
-  retry: (id: string) => fetch(`${API}/jobs/${id}/retry`, { method: "POST" }).then(j<Job>),
-  deleteJob: (id: string) => fetch(`${API}/jobs/${id}`, { method: "DELETE" }).then(j<{ ok: boolean }>),
-  place: (id: string, pacing?: Record<string, number>) =>
-    fetch(`${API}/jobs/${id}/place`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pacing }) }).then(j<Job>),
-  brands: () => fetch(`${API}/brands`, { cache: "no-store" }).then(j<{ brands: Brand[]; fallback: Brand }>),
-  addBrand: (b: Brand) => fetch(`${API}/brands`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then(j<{ brands: Brand[] }>),
-  deleteBrand: (id: string) => fetch(`${API}/brands/${id}`, { method: "DELETE" }).then(j<{ brands: Brand[] }>),
-  vocab: () => fetch(`${API}/vocab`).then(j<{ tags: string[]; moods: string[] }>),
+  retry: (id: string) => call(`/jobs/${id}/retry`, { method: "POST" }).then(j<Job>),
+  deleteJob: (id: string) => call(`/jobs/${id}`, { method: "DELETE" }).then(j<{ ok: boolean }>),
+  place: (id: string, pacing?: Record<string, number>) => call(`/jobs/${id}/place`, { method: "POST" }, { pacing }).then(j<Job>),
+  brands: () => call("/brands").then(j<{ brands: Brand[]; fallback: Brand }>),
+  addBrand: (b: Brand) => call("/brands", { method: "POST" }, b).then(j<{ brands: Brand[] }>),
+  deleteBrand: (id: string) => call(`/brands/${id}`, { method: "DELETE" }).then(j<{ brands: Brand[] }>),
+  vocab: () => call("/vocab").then(j<{ tags: string[]; moods: string[] }>),
 };
 
 export const mediaUrl = (u?: string | null) => (!u ? "" : u.startsWith("http") ? u : `${API}${u}`);

@@ -1,3 +1,4 @@
+import hashlib
 import os
 from pathlib import Path
 
@@ -13,6 +14,9 @@ def _models(env: str, default: str) -> list[str]:
 GEMINI_MODELS = _models("GEMINI_MODELS", "gemini-3.8-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3.5-flash-lite")
 # Brand matching / negative-context judgement (small text call → strongest model first)
 GEMINI_TEXT_MODELS = _models("GEMINI_TEXT_MODELS", "gemini-3.1-pro-preview,gemini-3.8-flash,gemini-3.7-flash")
+
+# Signing secret for auth tokens. Set JWT_SECRET in production; the fallback is stable per DB URL.
+JWT_SECRET = os.environ.get("JWT_SECRET") or hashlib.sha256(("cuepoint:" + os.environ.get("SUPABASE_DB_URL", "dev")).encode()).hexdigest()
 
 # Postgres DSN (Supabase → Connect → Session/Transaction pooler URI). Empty = local-only persistence.
 SUPABASE_DB_URL = os.environ.get("SUPABASE_DB_URL", "")

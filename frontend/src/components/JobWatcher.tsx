@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { api, Job } from "@/lib/api";
+import { getToken } from "@/lib/auth";
 
 const KEY = "cuepoint.jobStatus";
 const START = "cuepoint.sessionStart";
@@ -22,6 +23,7 @@ export function JobWatcher() {
     } catch { seen.current = null; }
     let stop = false;
     const tick = async () => {
+      if (!getToken()) return;
       let jobs: Job[];
       try { jobs = await api.jobs(); } catch { return; }
       if (stop) return;

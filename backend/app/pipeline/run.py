@@ -115,12 +115,12 @@ def place(job_id: str, analysis: dict, catalogue: dict, pacing: dict, creative_b
     }
 
 
-def run_job(job_id: str, video_path: str, pacing: dict | None = None) -> None:
+def run_job(job_id: str, video_path: str, pacing: dict | None = None, owner: str | None = None) -> None:
     try:
         analysis = analyze(job_id, video_path)
         store.update(job_id, analysis=analysis)
         store.set_progress(job_id, "placement", 85, "Scoring breaks and matching brands")
-        result = place(job_id, analysis, matching.load_brands(), {**config.DEFAULT_PACING, **(pacing or {})},
+        result = place(job_id, analysis, matching.load_brands(owner), {**config.DEFAULT_PACING, **(pacing or {})},
                        config.CREATIVE_BASE_URL, video_path=video_path)
         store.update(job_id, result=result, status="done", stage="done", progress=100, message="")
     except Exception as e:

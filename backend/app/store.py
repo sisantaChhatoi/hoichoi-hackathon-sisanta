@@ -24,6 +24,13 @@ create table if not exists public.jobs (
   data jsonb not null,
   updated_at timestamptz not null default now()
 );
+create table if not exists public.docs (
+  kind text not null,
+  key text not null,
+  data jsonb not null,
+  updated_at timestamptz not null default now(),
+  primary key (kind, key)
+);
 """
 
 
@@ -105,18 +112,73 @@ def save_job(job: dict, force_mirror: bool = False) -> None:
     _mirror(job, force=force_mirror or job.get("status") in ("done", "error", "queued"))
 
 
-def list_jobs() -> list[dict]:
+def list_jobs(owner: str | None = None) -> list[dict]:
+    """Jobs owned by `owner` plus public samples (jobs with no owner)."""
     jobs: dict[str, Any] = {}
     rows = _run(lambda c: c.execute(
         "select data - 'analysis' - 'result' - 'log', "
         "(data->'analysis'->'media'->>'duration')::float, jsonb_array_length(data->'result'->'breaks') "
-        "from public.jobs order by updated_at desc limit 200").fetchall())
+        "from public.jobs where coalesce(data->>'owner', '') in ('', %s) order by updated_at desc limit 200",
+        (owner or "",)).fetchall())
     for data, duration, breaks in rows or []:
         jobs[data["id"]] = {**data, "duration": duration, "breaks": breaks}
     for p in config.JOBS_DIR.glob("*.json"):
         j = json.loads(p.read_text())
+        if j.get("owner") in (None, "", owner):
+            jobs.setdefault(j["id"], _summary(j))
+    out = sorted(jobs.values(), key=lambda j: j.get("created_at", 0), reverse=True)
+    for j in out:
+        j["editable"] = can_edit(j, owner)
+    return out
+
+
+def list_jobs_all() -> list[dict]:
+    """Every job regardless of owner (startup resume only)."""
+    jobs: dict[str, Any] = {}
+    rows = _run(lambda c: c.execute("select data - 'analysis' - 'result' - 'log' from public.jobs").fetchall())
+    for (data,) in rows or []:
+        jobs[data["id"]] = data
+    for p in config.JOBS_DIR.glob("*.json"):
+        j = json.loads(p.read_text())
         jobs.setdefault(j["id"], _summary(j))
-    return sorted(jobs.values(), key=lambda j: j.get("created_at", 0), reverse=True)
+    return list(jobs.values())
+
+
+def can_view(job: dict, user: str | None) -> bool:
+    return not job.get("owner") or job.get("owner") == user
+
+
+def can_edit(job: dict, user: str | None) -> bool:
+    return bool(user) and job.get("owner") == user
+
+
+# ---------------------------------------------------------------- documents
+# Small keyed JSON documents (users, per-user brand catalogues): DB when
+# configured, local files otherwise.
+def _doc_path(kind: str, key: str):
+    d = config.DATA_DIR / "docs" / kind
+    d.mkdir(parents=True, exist_ok=True)
+    return d / f"{key}.json"
+
+
+def get_doc(kind: str, key: str) -> dict | None:
+    if config.SUPABASE_DB_URL:
+        row = _run(lambda c: c.execute("select data from public.docs where kind = %s and key = %s", (kind, key)).fetchone())
+        return row[0] if row else None
+    p = _doc_path(kind, key)
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def put_doc(kind: str, key: str, data: dict) -> None:
+    if config.SUPABASE_DB_URL:
+        ok = _run(lambda c: c.execute(
+            "insert into public.docs (kind, key, data, updated_at) values (%s, %s, %s::jsonb, now()) "
+            "on conflict (kind, key) do update set data = excluded.data, updated_at = now()",
+            (kind, key, json.dumps(data, ensure_ascii=False))))
+        if ok is not None:
+            return
+        raise RuntimeError("database unavailable")
+    _doc_path(kind, key).write_text(json.dumps(data, ensure_ascii=False))
 
 
 def _summary(j: dict) -> dict:

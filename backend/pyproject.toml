@@ -12,6 +12,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "anthropic>=1.8.0",
     "psycopg[binary]>=3.3.6",
+    "pyjwt>=2.15.0",
 ]
 
 [tool.uv]
