@@ -64,7 +64,7 @@ Why not just ask the model "where do the ads go"? Because the parts that must be
 Only semantic points become candidates — scene boundaries and pause points Gemini flagged inside long scenes. A quiet moment in the middle of a tense scene never becomes a break because nothing proposes it. The model's timestamps are whole seconds (it samples at 0.5 fps), so each candidate is **snapped** to the nearest real pause from ffmpeg's silence map (~10 ms precision) and scored from explainable components: pause length, the model's own boundary quality, and whether a shot change coincides. A cut that still lands inside dialogue is never used. In practice a fifth of candidates move by up to a few seconds, and several per episode are dropped — those would have been mid-sentence cuts.
 
 ### Whether
-Pacing rules decide how many breaks an episode may carry and where they may not go. Selection is greedy best-first, and every rejected candidate keeps the rule that rejected it ("would cut mid-dialogue", "break budget reached", "less than 5 min from another break", …). Rules are adjustable per episode and re-run in seconds without re-analysing.
+Pacing rules — chosen when an episode is submitted and adjustable afterwards — decide how many breaks an episode may carry and where they may not go. Selection is greedy best-first, and every rejected candidate keeps the rule that rejected it ("would cut mid-dialogue", "break budget reached", "less than 5 min from another break", …). Rules are adjustable per episode and re-run in seconds without re-analysing.
 
 ### What
 Brand matching has two gates and a ranker. A slot where **no** brand passes the gates is treated as a bad slot rather than forced: it is vetoed and the next-best candidate is tried; only if nothing works does a house promo appear, and then it is flagged for review. Gate 1 is a set intersection between the brand's *negative contexts* and the tags of the scenes on either side of the cut — no model can talk its way past it. Gate 2 lets a model enforce the brand's free-text rule. Survivors are ranked by context affinity with the *preceding* scene (dominant activity wins) and a model picks one with a one-sentence rationale. If everything is blocked, a house promo is used rather than a bad ad. Because brands and scenes share one vocabulary, a brand nobody has seen before is matched with zero code changes.
@@ -79,7 +79,7 @@ Breaks the system is not confident about — a merely acceptable cut, a neutral 
 
 ## Product
 
-- **Episodes** — upload (browser → Vercel Blob) or paste a URL; progress with stage, percent and time remaining; toast on completion with a View action.
+- **Episodes** — upload (browser → Vercel Blob) or paste a URL, choose the pacing rules for the episode, then watch progress with stage, percent and time remaining; a toast with a View action when it finishes.
 - **Episode view** — custom player with break markers on the seek bar, scene strip (colour = mood; hover for summary and tags), each break with its brand, rationale, why-this-cut, blocked brands and the reviewer's verdict; breaks held for review with Insert / Reject, Remove on any break; pacing sliders that re-place in seconds; a list of every other cut considered and why it lost.
 - **Brands** — a fictional catalogue per user, seeded with eight brands; add one in a dialog (contexts to seek, contexts to avoid, a free-text rule, creative colours); click a row to preview its creative.
 - **Outputs** — VMAP manifest and decision report per episode.
@@ -140,7 +140,8 @@ All `/jobs` and `/brands` routes require `Authorization: Bearer <token>`.
 |---|---|---|
 | POST | `/auth/signup` · `/auth/login` | `{username, password}` → `{token}` |
 | GET | `/auth/me` | current user |
-| POST | `/jobs` `{url,title}` · `/jobs/upload` (multipart) | analyse an episode |
+| POST | `/jobs` `{url,title,pacing}` · `/jobs/upload` (multipart, `pacing` JSON field) | analyse an episode |
+| GET | `/pacing` | default pacing rules |
 | GET | `/jobs` · `/jobs/{id}` | list / detail (scenes, breaks, rejected candidates) |
 | POST | `/jobs/{id}/place` `{pacing}` | re-run scoring + matching only |
 | POST | `/jobs/{id}/breaks/{break_id}` `{action}` | approve a held break or remove one |

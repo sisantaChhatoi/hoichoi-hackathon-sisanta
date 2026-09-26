@@ -38,8 +38,8 @@ Auto-DQ: hard-coded timestamps/brands, ANY negative-context violation on held-ou
 - Frontend: https://hoichoi-hackathon-sisanta.vercel.app (Vercel, root `frontend/`, env `NEXT_PUBLIC_API_URL`, `BLOB_READ_WRITE_TOKEN` added manually — the store connection only added `BLOB_STORE_ID`).
 - Backend: https://hoichoi-hackathon-sisanta.onrender.com (Render free, Docker). Any env change/deploy restarts the container and kills
   in-flight jobs → `_resume_interrupted()` on startup re-queues them from the Blob URL. **No deploys during judging.**
-- Prod timing: 23-min episode ≈ 3.5 min (silence 30s, Gemini upload 30s, 5 chunks 2 min, match+judge 40s).
-- Seeded prod jobs: mohanagar `514cf6c8442d`, bhojon `7483fadeae21`, money_honey `05b838d99310` (videos in Vercel Blob `episodes/`).
+- Prod timing: 23-min episode ≈ 2 min (silence 30s, upload 30s, chunks in parallel at 0.5 fps ~30s, match+judge 40–90s). Breaks with real doubt are held for user review.
+- Prod jobs belong to user accounts (sisanta__ owns the seeded three; sisanta___ ran mandaar). Videos in Vercel Blob `episodes/`.
 - Keep-alive: `.github/workflows/keepalive.yml` pings /health every 10 min.
 - Auth: JWT (HS256, 7d) — set JWT_SECRET on Render; tables users/jobs.owner_id/brands are per user; the old public-sample concept is gone. Local user account: sisanta__.
 
