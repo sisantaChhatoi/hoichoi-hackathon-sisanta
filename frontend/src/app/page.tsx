@@ -42,6 +42,16 @@ export default function Home() {
   }
 
   return (
+    <div className="flex flex-col gap-6">
+    <div className="panel p-5 text-sm">
+      <h1 className="text-lg font-bold mb-1">Context-aware ad placement for long-form Bengali drama</h1>
+      <p className="muted">Upload an episode; the system segments it into scenes, decides <b>where</b> a cut is non-jarring, <b>whether</b> a break is warranted under pacing rules, and <b>what</b> synthetic brand belongs in each slot — then emits a VMAP manifest, a debug JSON explaining every decision, and a player that actually cuts to the ad and resumes.</p>
+      <div className="grid sm:grid-cols-3 gap-3 mt-3 text-xs">
+        <div className="panel p-3"><b>Where</b> — Gemini scene boundaries + intra-scene pause points, snapped to ffmpeg silence gaps. Mid-sentence cuts are never used; every score term is in the debug JSON.</div>
+        <div className="panel p-3"><b>Whether</b> — max breaks/hour, min gap, ad-load %, no breaks near the edges. Rejected candidates are listed with the rule that rejected them.</div>
+        <div className="panel p-3"><b>What</b> — a brand&apos;s <code>negative_contexts</code> vs the scene tags is a hard block (set logic, not an LLM opinion); an LLM ranks the survivors with a rationale; an independent judge model audits every break. Add a 9th brand in the catalogue — zero code changes.</div>
+      </div>
+    </div>
     <div className="grid gap-6 md:grid-cols-[1fr_1.4fr]">
       <form onSubmit={submit} className="panel p-5 flex flex-col gap-3 h-fit">
         <h2 className="font-semibold text-lg">Analyse an episode</h2>
@@ -68,6 +78,7 @@ export default function Home() {
           ))}
         </ul>
       </div>
+    </div>
     </div>
   );
 }
