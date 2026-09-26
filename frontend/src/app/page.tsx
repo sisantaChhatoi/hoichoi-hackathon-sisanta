@@ -83,7 +83,7 @@ export default function Home() {
             onDragLeave={() => setDrag(false)}
             onDrop={(e) => { e.preventDefault(); setDrag(false); setFile(e.dataTransfer.files?.[0] ?? null); }}
             onClick={() => fileInput.current?.click()}
-            className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-12 text-center text-sm transition-colors",
+            className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-input px-4 py-12 text-center text-sm transition-colors",
               drag ? "border-foreground bg-accent/60" : "hover:bg-accent/40")}>
             <Upload className="size-5 text-muted-foreground" />
             {file ? (

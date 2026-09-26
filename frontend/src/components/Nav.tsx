@@ -12,7 +12,7 @@ const links = [
 export function Nav() {
   const path = usePathname();
   return (
-    <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b bg-background/40 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-8 px-5 lg:px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <span className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground">
